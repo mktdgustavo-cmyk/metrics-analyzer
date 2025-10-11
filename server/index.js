@@ -21,42 +21,6 @@ function xlsxToCSV(buffer) {
   return XLSX.utils.sheet_to_csv(worksheet);
 }
 
-// Mapeamentos Hotmart
-const HOTMART_PRICE_MAPPINGS = {
-  '997e3yhk': { product: 'Descomplica', origin: 'Ads - Page' },
-  'gyy2gzop': { product: 'Descomplica', origin: 'N/A' },
-  '2pzpv0td': { product: 'Descomplica', origin: 'Whatsapp Upsell' },
-  '1yflbmft': { product: 'Descomplica', origin: 'Ads - Page com VSL' },
-  'j5jzrlt1': { product: 'Checklist', origin: 'N/A' },
-  '4oeu5x7p': { product: 'Checklist', origin: 'Bump Descomplica' },
-  'xtg98r9p': { product: 'Checklist', origin: 'Bump Descomplica' },
-  'oi58y3o3': { product: 'Checklist', origin: 'Ads' },
-  '59um3csu': { product: 'Checklist', origin: 'Ads' },
-  '7vtjjnnt': { product: 'Checklist', origin: 'Ads' },
-  '024nuedz': { product: 'Checklist', origin: 'Ads' },
-  'icm6fa9c': { product: 'Iluminação profissional', origin: 'N/A' },
-  'jf0ztef5': { product: 'Iluminação profissional', origin: 'Bump Descomplica' },
-  '460lfl63': { product: 'Iluminação profissional', origin: 'Bump Descomplica' },
-  'v046zzii': { product: 'Iluminação profissional', origin: 'Ads' },
-  'bzpif1xj': { product: 'Iluminação profissional', origin: 'Ads' },
-  'p0d170xv': { product: 'Iluminação profissional', origin: 'Ads' },
-  'touesadl': { product: 'Monitoria/Grava Simples', origin: 'N/A' },
-  '38erp7wk': { product: 'Grava Simples/Consultoria', origin: 'Renata' },
-  'bb391y5l': { product: 'Monitoria/Grava Simples', origin: 'N/A' },
-  'hgrsrrgr': { product: 'Monitoria/Grava Simples', origin: 'Whatsapp Upsell' },
-  '3wddccov': { product: 'Monitoria/Grava Simples', origin: 'Whatsapp Upsell' },
-  'tx535ol2': { product: 'Monitoria/Grava Simples', origin: 'Upgrade Descomplica' },
-  'jjsggcwy': { product: 'Monitoria/Grava Simples', origin: 'N/A' },
-  'h9i0lur1': { product: 'Grava Simples/Consultoria', origin: 'Upgrade Descomplica' },
-  'miqsmmjn': { product: 'Grava Simples/Consultoria', origin: 'Área de membros' },
-  '3uh0jwrz': { product: 'Grava Simples/Consultoria', origin: 'Área de membros' },
-  'vxwamur3': { product: 'Grava Simples/Consultoria', origin: 'N/A' },
-  'w9allmjk': { product: 'Grava Simples/Consultoria', origin: 'N/A' },
-  '775p3wjv': { product: 'Monitoria/Grava Simples', origin: 'N/A' },
-  'ce8nr3lp': { product: 'Executa Infoprodutor', origin: 'Campanha' },
-  'wawx8lne': { product: 'Youtube', origin: 'N/A' }
-};
-
 // ===================================================
 // CATEGORIZAÇÃO LDR 77 vs 147
 // ===================================================
@@ -114,94 +78,167 @@ function calcularEstatisticasLDR(categorias) {
   };
 }
 
-<div className="bg-white rounded-lg shadow p-6">
-  <h3 className="text-xl font-bold mb-4 text-gray-800">💎 Bumps - Taxa de Conversão</h3>
+// Mapeamentos Hotmart
+const HOTMART_PRICE_MAPPINGS = {
+  '997e3yhk': { product: 'Descomplica', origin: 'Ads - Page' },
+  'gyy2gzop': { product: 'Descomplica', origin: 'N/A' },
+  '2pzpv0td': { product: 'Descomplica', origin: 'Whatsapp Upsell' },
+  '1yflbmft': { product: 'Descomplica', origin: 'Ads - Page com VSL' },
+  'j5jzrlt1': { product: 'Checklist', origin: 'N/A' },
+  '4oeu5x7p': { product: 'Checklist', origin: 'Bump Descomplica' },
+  'xtg98r9p': { product: 'Checklist', origin: 'Bump Descomplica' },
+  'oi58y3o3': { product: 'Checklist', origin: 'Ads' },
+  '59um3csu': { product: 'Checklist', origin: 'Ads' },
+  '7vtjjnnt': { product: 'Checklist', origin: 'Ads' },
+  '024nuedz': { product: 'Checklist', origin: 'Ads' },
+  'icm6fa9c': { product: 'Iluminação profissional', origin: 'N/A' },
+  'jf0ztef5': { product: 'Iluminação profissional', origin: 'Bump Descomplica' },
+  '460lfl63': { product: 'Iluminação profissional', origin: 'Bump Descomplica' },
+  'v046zzii': { product: 'Iluminação profissional', origin: 'Ads' },
+  'bzpif1xj': { product: 'Iluminação profissional', origin: 'Ads' },
+  'p0d170xv': { product: 'Iluminação profissional', origin: 'Ads' },
+  'touesadl': { product: 'Monitoria/Grava Simples', origin: 'N/A' },
+  '38erp7wk': { product: 'Grava Simples/Consultoria', origin: 'Renata' },
+  'bb391y5l': { product: 'Monitoria/Grava Simples', origin: 'N/A' },
+  'hgrsrrgr': { product: 'Monitoria/Grava Simples', origin: 'Whatsapp Upsell' },
+  '3wddccov': { product: 'Monitoria/Grava Simples', origin: 'Whatsapp Upsell' },
+  'tx535ol2': { product: 'Monitoria/Grava Simples', origin: 'Upgrade Descomplica' },
+  'jjsggcwy': { product: 'Monitoria/Grava Simples', origin: 'N/A' },
+  'h9i0lur1': { product: 'Grava Simples/Consultoria', origin: 'Upgrade Descomplica' },
+  'miqsmmjn': { product: 'Grava Simples/Consultoria', origin: 'Área de membros' },
+  '3uh0jwrz': { product: 'Grava Simples/Consultoria', origin: 'Área de membros' },
+  'vxwamur3': { product: 'Grava Simples/Consultoria', origin: 'N/A' },
+  'w9allmjk': { product: 'Grava Simples/Consultoria', origin: 'N/A' },
+  '775p3wjv': { product: 'Monitoria/Grava Simples', origin: 'N/A' },
+  'ce8nr3lp': { product: 'Executa Infoprodutor', origin: 'Campanha' },
+  'wawx8lne': { product: 'Youtube', origin: 'N/A' }
+};
+
+// Processar Hubla - COM TODAS AS FEATURES
+function processHubla(csvText) {
+  const parsed = Papa.parse(csvText, {
+    header: true,
+    dynamicTyping: true,
+    skipEmptyLines: true
+  });
+
+  const data = parsed.data.filter(r => r['Status da fatura'] === 'Paga');
   
-  {/* Bumps Geral */}
-  <div className="mb-4">
-    <h4 className="font-semibold text-sm text-gray-600 mb-2">📊 Geral (Todos os LDR)</h4>
-    <div className="space-y-2">
-      {Object.entries(results.bumps.conversionRates).map(([bump, rate]) => (
-        <div key={bump} className="flex justify-between items-center bg-gray-50 p-3 rounded">
-          <span className="text-gray-700">{bump}</span>
-          <span className="font-bold text-purple-600">{rate}</span>
-        </div>
-      ))}
-    </div>
-  </div>
+  const ldrSales = data.filter(r => r['Nome do produto'] === 'Laboratório de Roteiros');
+  const rnpSales = data.filter(r => r['Nome do produto'] === 'Roteiros na Prática');
   
-  {/* Bumps por Categoria */}
-  {results.bumps.byCategory && (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-      {/* LDR 77 */}
-      <div className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
-        <h4 className="font-semibold text-sm text-blue-700 mb-3">
-          💎 Bumps LDR 77
-          <span className="text-xs text-gray-600 ml-2">
-            (base: {results.bumps.byCategory.ldr77.totalVendas} vendas)
-          </span>
-        </h4>
-        {Object.keys(results.bumps.byCategory.ldr77.counts).length > 0 ? (
-          <div className="space-y-2">
-            {Object.entries(results.bumps.byCategory.ldr77.counts).map(([bump, count]) => (
-              <div key={bump} className="bg-white p-2 rounded">
-                <div className="text-xs text-gray-600 truncate">{bump}</div>
-                <div className="flex justify-between items-center mt-1">
-                  <span className="text-sm font-medium text-blue-700">{count} vendas</span>
-                  <span className="text-sm font-bold text-blue-600">
-                    {results.bumps.byCategory.ldr77.conversionRates[bump]}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-gray-500 italic">Nenhum bump vendido</p>
-        )}
-      </div>
-      
-      {/* LDR 147 */}
-      <div className="border-2 border-purple-200 rounded-lg p-4 bg-purple-50">
-        <h4 className="font-semibold text-sm text-purple-700 mb-3">
-          💎 Bumps LDR 147
-          <span className="text-xs text-gray-600 ml-2">
-            (base: {results.bumps.byCategory.ldr147.totalVendas} vendas)
-          </span>
-        </h4>
-        {Object.keys(results.bumps.byCategory.ldr147.counts).length > 0 ? (
-          <div className="space-y-2">
-            {Object.entries(results.bumps.byCategory.ldr147.counts).map(([bump, count]) => (
-              <div key={bump} className="bg-white p-2 rounded">
-                <div className="text-xs text-gray-600 truncate">{bump}</div>
-                <div className="flex justify-between items-center mt-1">
-                  <span className="text-sm font-medium text-purple-700">{count} vendas</span>
-                  <span className="text-sm font-bold text-purple-600">
-                    {results.bumps.byCategory.ldr147.conversionRates[bump]}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-gray-500 italic">Nenhum bump vendido</p>
-        )}
-      </div>
-    </div>
-  )}
+  // ===== CATEGORIZAÇÃO LDR 77 vs 147 =====
+  const categoriasLDR = categorizarVendasLDR(ldrSales);
+  const estatisticasLDR = calcularEstatisticasLDR(categoriasLDR);
   
-  {/* Quantidade Total de Bumps */}
-  <div className="mt-4 pt-4 border-t">
-    <h4 className="font-semibold mb-2 text-sm text-gray-600">📦 Quantidade Total de Vendas:</h4>
-    <div className="grid grid-cols-2 gap-2">
-      {Object.entries(results.bumps.counts).map(([bump, count]) => (
-        <div key={bump} className="flex justify-between text-sm text-gray-600 bg-gray-50 p-2 rounded">
-          <span className="truncate">{bump}:</span>
-          <span className="font-medium ml-2">{count}</span>
-        </div>
-      ))}
-    </div>
-  </div>
-</div>
+  const ldrByOrigin = {};
+  ldrSales.forEach(sale => {
+    const origin = getHublaOrigin(sale);
+    ldrByOrigin[origin] = (ldrByOrigin[origin] || 0) + 1;
+  });
+  
+  const rnpByOrigin = {};
+  rnpSales.forEach(sale => {
+    const origin = getHublaOrigin(sale);
+    rnpByOrigin[origin] = (rnpByOrigin[origin] || 0) + 1;
+  });
+  
+  // ===== BUMPS GERAL =====
+  const bumps = {};
+  const ldrSalesWithBump = ldrSales.filter(s => s['Nome do produto de orderbump']);
+  
+  ldrSalesWithBump.forEach(sale => {
+    const bumpNames = sale['Nome do produto de orderbump'];
+    if (bumpNames) {
+      const bumpList = bumpNames.split(', ');
+      bumpList.forEach(bump => {
+        bumps[bump] = (bumps[bump] || 0) + 1;
+      });
+    }
+  });
+  
+  const bumpRates = {};
+  Object.keys(bumps).forEach(bump => {
+    bumpRates[bump] = ((bumps[bump] / ldrSales.length) * 100).toFixed(2) + '%';
+  });
+  
+  // ===== BUMPS POR CATEGORIA (77 vs 147) =====
+  const bumps77 = {};
+  const bumps147 = {};
+  
+  // Processar bumps do LDR 77
+  categoriasLDR.ldr77.forEach(sale => {
+    const bumpNames = sale['Nome do produto de orderbump'];
+    if (bumpNames) {
+      const bumpList = bumpNames.split(', ');
+      bumpList.forEach(bump => {
+        bumps77[bump] = (bumps77[bump] || 0) + 1;
+      });
+    }
+  });
+  
+  // Processar bumps do LDR 147
+  categoriasLDR.ldr147.forEach(sale => {
+    const bumpNames = sale['Nome do produto de orderbump'];
+    if (bumpNames) {
+      const bumpList = bumpNames.split(', ');
+      bumpList.forEach(bump => {
+        bumps147[bump] = (bumps147[bump] || 0) + 1;
+      });
+    }
+  });
+  
+  // Calcular taxas de conversão por categoria
+  const bumpRates77 = {};
+  const bumpRates147 = {};
+  
+  Object.keys(bumps77).forEach(bump => {
+    bumpRates77[bump] = ((bumps77[bump] / categoriasLDR.ldr77.length) * 100).toFixed(2) + '%';
+  });
+  
+  Object.keys(bumps147).forEach(bump => {
+    bumpRates147[bump] = ((bumps147[bump] / categoriasLDR.ldr147.length) * 100).toFixed(2) + '%';
+  });
+  
+  // ===== REEMBOLSOS =====
+  const refunds = data.filter(r => r['Data de reembolso'] !== null);
+  const ldrRefunds = refunds.filter(r => r['Nome do produto'] === 'Laboratório de Roteiros').length;
+  const rnpRefunds = refunds.filter(r => r['Nome do produto'] === 'Roteiros na Prática').length;
+  
+  return {
+    project: 'Perettas',
+    platform: 'Hubla',
+    sales: {
+      ldr: {
+        total: ldrSales.length,
+        byOrigin: ldrByOrigin,
+        refunds: ldrRefunds,
+        categorias: estatisticasLDR
+      },
+      rnp: {
+        total: rnpSales.length,
+        byOrigin: rnpByOrigin,
+        refunds: rnpRefunds
+      }
+    },
+    bumps: {
+      counts: bumps,
+      conversionRates: bumpRates,
+      byCategory: {
+        ldr77: {
+          counts: bumps77,
+          conversionRates: bumpRates77,
+          totalVendas: categoriasLDR.ldr77.length
+        },
+        ldr147: {
+          counts: bumps147,
+          conversionRates: bumpRates147,
+          totalVendas: categoriasLDR.ldr147.length
+        }
+      }
+    }
+  };
+}
 
 function getHublaOrigin(sale) {
   const origem = sale['UTM Origem'];
@@ -276,13 +313,12 @@ function processHotmart(csvText) {
   };
 }
 
-// Endpoints - ATUALIZADOS PARA SUPORTAR XLSX
+// Endpoints - COM SUPORTE A XLSX
 app.post('/api/process/hubla', upload.single('file'), (req, res) => {
   try {
     let csvText;
     const fileName = req.file.originalname.toLowerCase();
     
-    // Detectar tipo de arquivo e converter se necessário
     if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
       csvText = xlsxToCSV(req.file.buffer);
     } else {
@@ -301,7 +337,6 @@ app.post('/api/process/hotmart', upload.single('file'), (req, res) => {
     let csvText;
     const fileName = req.file.originalname.toLowerCase();
     
-    // Detectar tipo de arquivo e converter se necessário
     if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
       csvText = xlsxToCSV(req.file.buffer);
     } else {
