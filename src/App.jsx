@@ -69,8 +69,9 @@ function App() {
           </div>
 
           <div className="mb-6">
-            <h4 className="font-semibold text-lg mb-2 text-green-600">Conversões - RNP: {results.sales.rnp.total}</h4>
-            
+  <h4 className="font-semibold text-lg mb-2 text-blue-600">Conversões - LDR: {results.sales.ldr.total}</h4>
+  
+  {/* NOVO: Categorização LDR 77 vs 147 */}
   {results.sales.ldr.categorias && (
     <div className="mb-3 p-3 bg-blue-50 rounded-lg">
       <h5 className="font-semibold text-sm text-blue-700 mb-2">📊 Distribuição por Oferta</h5>
