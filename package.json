@@ -1,6 +1,5 @@
 {
   "name": "metrics-analyzer",
-  "type": "module",
   "version": "1.0.0",
   "description": "Microsserviço para análise de métricas Perettas e Grava Simples",
   "main": "server/index.js",
