@@ -4,6 +4,7 @@ const multer = require('multer');
 const Papa = require('papaparse');
 const _ = require('lodash');
 const path = require('path');
+const XLSX = require('xlsx');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -11,6 +12,14 @@ const upload = multer({ storage: multer.memoryStorage() });
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../dist')));
+
+// FUNÇÃO PARA CONVERTER XLSX EM CSV
+function xlsxToCSV(buffer) {
+  const workbook = XLSX.read(buffer, { type: 'buffer' });
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  return XLSX.utils.sheet_to_csv(worksheet);
+}
 
 // Mapeamentos Hotmart
 const HOTMART_PRICE_MAPPINGS = {
@@ -190,10 +199,19 @@ function processHotmart(csvText) {
   };
 }
 
-// Endpoints
+// Endpoints - ATUALIZADOS PARA SUPORTAR XLSX
 app.post('/api/process/hubla', upload.single('file'), (req, res) => {
   try {
-    const csvText = req.file.buffer.toString('utf-8');
+    let csvText;
+    const fileName = req.file.originalname.toLowerCase();
+    
+    // Detectar tipo de arquivo e converter se necessário
+    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+      csvText = xlsxToCSV(req.file.buffer);
+    } else {
+      csvText = req.file.buffer.toString('utf-8');
+    }
+    
     const result = processHubla(csvText);
     res.json(result);
   } catch (error) {
@@ -203,7 +221,16 @@ app.post('/api/process/hubla', upload.single('file'), (req, res) => {
 
 app.post('/api/process/hotmart', upload.single('file'), (req, res) => {
   try {
-    const csvText = req.file.buffer.toString('utf-8');
+    let csvText;
+    const fileName = req.file.originalname.toLowerCase();
+    
+    // Detectar tipo de arquivo e converter se necessário
+    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+      csvText = xlsxToCSV(req.file.buffer);
+    } else {
+      csvText = req.file.buffer.toString('utf-8');
+    }
+    
     const result = processHotmart(csvText);
     res.json(result);
   } catch (error) {
