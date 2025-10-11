@@ -70,21 +70,52 @@ function App() {
 
           <div className="mb-6">
             <h4 className="font-semibold text-lg mb-2 text-green-600">Conversões - RNP: {results.sales.rnp.total}</h4>
-            <div className="ml-4 space-y-1">
-              {Object.entries(results.sales.rnp.byOrigin).map(([origin, count]) => (
-                <div key={origin} className="flex justify-between text-gray-700">
-                  <span>{origin}:</span>
-                  <span className="font-medium">{count}</span>
-                </div>
-              ))}
-            </div>
-            {results.sales.rnp.refunds > 0 && (
-              <div className="mt-2 text-red-600">
-                Reembolsos: {results.sales.rnp.refunds}
-              </div>
-            )}
+            
+  {results.sales.ldr.categorias && (
+    <div className="mb-3 p-3 bg-blue-50 rounded-lg">
+      <h5 className="font-semibold text-sm text-blue-700 mb-2">📊 Distribuição por Oferta</h5>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-white p-2 rounded text-center">
+          <div className="text-xs text-gray-500">LDR 77</div>
+          <div className="text-lg font-bold text-blue-600">
+            {results.sales.ldr.categorias.ldr77.quantidade}
+          </div>
+          <div className="text-xs text-gray-600">
+            {results.sales.ldr.categorias.ldr77.percentual}
           </div>
         </div>
+        <div className="bg-white p-2 rounded text-center">
+          <div className="text-xs text-gray-500">LDR 147</div>
+          <div className="text-lg font-bold text-purple-600">
+            {results.sales.ldr.categorias.ldr147.quantidade}
+          </div>
+          <div className="text-xs text-gray-600">
+            {results.sales.ldr.categorias.ldr147.percentual}
+          </div>
+        </div>
+      </div>
+      {results.sales.ldr.categorias.outros.quantidade > 0 && (
+        <div className="mt-2 text-xs text-gray-500 text-center">
+          Outras ofertas: {results.sales.ldr.categorias.outros.quantidade}
+        </div>
+      )}
+    </div>
+  )}
+  
+  <div className="ml-4 space-y-1">
+    {Object.entries(results.sales.ldr.byOrigin).map(([origin, count]) => (
+      <div key={origin} className="flex justify-between text-gray-700">
+        <span>{origin}:</span>
+        <span className="font-medium">{count}</span>
+      </div>
+    ))}
+  </div>
+  {results.sales.ldr.refunds > 0 && (
+    <div className="mt-2 text-red-600">
+      Reembolsos: {results.sales.ldr.refunds}
+    </div>
+  )}
+</div>
 
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-xl font-bold mb-4 text-gray-800">💎 Bumps - Taxa de Conversão</h3>
