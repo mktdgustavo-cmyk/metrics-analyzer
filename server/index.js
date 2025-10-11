@@ -57,7 +57,64 @@ const HOTMART_PRICE_MAPPINGS = {
   'wawx8lne': { product: 'Youtube', origin: 'N/A' }
 };
 
-// Processar Hubla
+// ===================================================
+// CATEGORIZAÇÃO LDR 77 vs 147
+// ===================================================
+function categorizarVendasLDR(vendas) {
+  const categorias = {
+    ldr77: [],
+    ldr147: [],
+    outros: []
+  };
+  
+  vendas.forEach(venda => {
+    const oferta = (venda['Nome da oferta'] || '').toString().toLowerCase();
+    
+    // Identificar LDR 77
+    if (oferta.includes('[ldr] 77') || 
+        oferta.includes('[77]') || 
+        oferta.includes('renovação alunos - 67') || 
+        oferta.includes('renovação alunos - 97')) {
+      categorias.ldr77.push(venda);
+    } 
+    // Identificar LDR 147
+    else if (oferta.includes('[ldr] 147') || 
+             oferta.includes('[147]')) {
+      categorias.ldr147.push(venda);
+    } 
+    // Outros casos
+    else {
+      categorias.outros.push(venda);
+    }
+  });
+  
+  return categorias;
+}
+
+function calcularEstatisticasLDR(categorias) {
+  const qtdLDR77 = categorias.ldr77.length;
+  const qtdLDR147 = categorias.ldr147.length;
+  const qtdOutros = categorias.outros.length;
+  const totalGeral = qtdLDR77 + qtdLDR147 + qtdOutros;
+  const totalPrincipal = qtdLDR77 + qtdLDR147;
+  
+  return {
+    ldr77: {
+      quantidade: qtdLDR77,
+      percentual: totalPrincipal > 0 ? ((qtdLDR77 / totalPrincipal) * 100).toFixed(1) + '%' : '0%'
+    },
+    ldr147: {
+      quantidade: qtdLDR147,
+      percentual: totalPrincipal > 0 ? ((qtdLDR147 / totalPrincipal) * 100).toFixed(1) + '%' : '0%'
+    },
+    outros: {
+      quantidade: qtdOutros
+    },
+    total: totalGeral
+  };
+}
+
+// Processar Hubla - ATUALIZADO COM CATEGORIZAÇÃO LDR
 function processHubla(csvText) {
   const parsed = Papa.parse(csvText, {
     header: true,
@@ -69,6 +126,10 @@ function processHubla(csvText) {
   
   const ldrSales = data.filter(r => r['Nome do produto'] === 'Laboratório de Roteiros');
   const rnpSales = data.filter(r => r['Nome do produto'] === 'Roteiros na Prática');
+  
+  // ===== CATEGORIZAÇÃO LDR 77 vs 147 =====
+  const categoriasLDR = categorizarVendasLDR(ldrSales);
+  const estatisticasLDR = calcularEstatisticasLDR(categoriasLDR);
   
   const ldrByOrigin = {};
   ldrSales.forEach(sale => {
@@ -111,7 +172,8 @@ function processHubla(csvText) {
       ldr: {
         total: ldrSales.length,
         byOrigin: ldrByOrigin,
-        refunds: ldrRefunds
+        refunds: ldrRefunds,
+        categorias: estatisticasLDR  // ← NOVO: Estatísticas LDR 77 vs 147
       },
       rnp: {
         total: rnpSales.length,
