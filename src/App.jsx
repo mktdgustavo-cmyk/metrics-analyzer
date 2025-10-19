@@ -313,16 +313,32 @@ function App() {
         )}
 
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-xl font-bold mb-4 text-gray-800">📊 Vendas Totais</h3>
-          <div className="grid grid-cols-2 gap-4">
-            {Object.entries(results.sales).map(([product, count]) => (
-              <div key={product} className="bg-blue-50 p-4 rounded-lg">
-                <div className="text-sm text-gray-600">{product}</div>
-                <div className="text-2xl font-bold text-blue-600">{count}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+  <h3 className="text-xl font-bold mb-4 text-gray-800">📊 Vendas Totais</h3>
+  
+  {/* TOTAL GERAL - DESTAQUE */}
+  <div className="mb-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 text-white">
+    <div className="text-center">
+      <div className="text-sm font-medium opacity-90 mb-2">TOTAL DE VENDAS</div>
+      <div className="text-5xl font-bold">
+        {Object.values(results.sales).reduce((sum, count) => sum + count, 0)}
+      </div>
+      <div className="text-sm opacity-75 mt-2">
+        vendas aprovadas no período
+      </div>
+    </div>
+  </div>
+  
+  {/* VENDAS POR PRODUTO */}
+  <h4 className="font-semibold text-gray-700 mb-3 text-sm">Por Produto:</h4>
+  <div className="grid grid-cols-2 gap-4">
+    {Object.entries(results.sales).map(([product, count]) => (
+      <div key={product} className="bg-blue-50 p-4 rounded-lg border border-blue-200 hover:border-blue-400 transition-colors">
+        <div className="text-sm text-gray-600 mb-1">{product}</div>
+        <div className="text-2xl font-bold text-blue-600">{count}</div>
+      </div>
+    ))}
+  </div>
+</div>
 
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-xl font-bold mb-4 text-gray-800">💎 Taxa de Bump</h3>
