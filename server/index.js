@@ -364,59 +364,91 @@ function processHotmart(csvText) {
     salesByOrigin[product][origin] = (salesByOrigin[product][origin] || 0) + 1;
   });
   
-  // ===== SISTEMA AUTOMÁTICO DE DETECÇÃO DE BUMPS =====
-  const bumpRelations = {}; // { "ProdutoPrincipal": { "ProdutoBump": quantidade } }
-  const productSalesCount = {}; // Contar vendas diretas (não-bump) por produto
+ // Primeiro, criar um mapa de transações para acesso rápido
+const transactionMap = {};
+data.forEach(sale => {
+  // Hotmart pode usar diferentes campos para ID da transação
+  const transactionId = sale['Transação da venda'] || 
+                       sale['Código da transação'] || 
+                       sale['ID da transação'];
   
-  data.forEach(sale => {
-    const mainTransaction = sale['Transação do Produto Principal'];
-    const currentProduct = sale['Produto'];
+  if (transactionId) {
+    transactionMap[transactionId] = sale;
+  }
+});
+
+const bumpRelations = {}; 
+const productSalesCount = {}; 
+
+// Processar cada venda
+data.forEach(sale => {
+  const mainTransactionId = sale['Transação do Produto Principal'];
+  const currentProduct = sale['Produto'];
+  const priceCode = sale['Código do preço'];
+  const mapping = HOTMART_PRICE_MAPPINGS[priceCode];
+  
+  // Pular se não tiver mapeamento
+  if (!mapping) return;
+  
+  const mappedProduct = mapping.product;
+  
+  if (mainTransactionId && mainTransactionId !== '(none)' && mainTransactionId !== '') {
+    // É um BUMP - encontrar o produto principal
+    const mainSale = transactionMap[mainTransactionId];
     
-    if (mainTransaction && mainTransaction !== '(none)') {
-      // É um bump - encontrar o produto principal
-      const mainSale = data.find(s => 
-        s['Transação da venda'] === mainTransaction || 
-        s['Código da transação'] === mainTransaction
-      );
+    if (mainSale) {
+      const mainPriceCode = mainSale['Código do preço'];
+      const mainMapping = HOTMART_PRICE_MAPPINGS[mainPriceCode];
       
-      if (mainSale) {
-        const mainProduct = mainSale['Produto'];
+      if (mainMapping) {
+        const mainMappedProduct = mainMapping.product;
         
-        if (!bumpRelations[mainProduct]) {
-          bumpRelations[mainProduct] = {};
+        // Registrar a relação bump
+        if (!bumpRelations[mainMappedProduct]) {
+          bumpRelations[mainMappedProduct] = {};
         }
         
-        bumpRelations[mainProduct][currentProduct] = 
-          (bumpRelations[mainProduct][currentProduct] || 0) + 1;
+        bumpRelations[mainMappedProduct][mappedProduct] = 
+          (bumpRelations[mainMappedProduct][mappedProduct] || 0) + 1;
       }
-    } else {
-      // Venda direta (não é bump)
-      productSalesCount[currentProduct] = 
-        (productSalesCount[currentProduct] || 0) + 1;
     }
-  });
+  } else {
+    // É uma VENDA DIRETA (não é bump)
+    productSalesCount[mappedProduct] = 
+      (productSalesCount[mappedProduct] || 0) + 1;
+  }
+});
+
+// ===== CALCULAR TAXAS DE CONVERSÃO DE BUMPS =====
+const bumpConversionRates = {};
+
+Object.keys(bumpRelations).forEach(mainProduct => {
+  const mainProductSales = productSalesCount[mainProduct] || 0;
   
-  // ===== CALCULAR TAXAS DE CONVERSÃO DE BUMPS =====
-  const bumpConversionRates = {};
+  if (mainProductSales === 0) {
+    console.log(`⚠️ Aviso: ${mainProduct} tem bumps mas 0 vendas diretas registradas`);
+    return;
+  }
   
-  Object.keys(bumpRelations).forEach(mainProduct => {
-    const mainProductSales = productSalesCount[mainProduct] || 0;
+  bumpConversionRates[mainProduct] = {};
+  
+  Object.keys(bumpRelations[mainProduct]).forEach(bumpProduct => {
+    const bumpCount = bumpRelations[mainProduct][bumpProduct];
+    const rate = ((bumpCount / mainProductSales) * 100).toFixed(2) + '%';
     
-    if (mainProductSales === 0) return;
-    
-    bumpConversionRates[mainProduct] = {};
-    
-    Object.keys(bumpRelations[mainProduct]).forEach(bumpProduct => {
-      const bumpCount = bumpRelations[mainProduct][bumpProduct];
-      const rate = ((bumpCount / mainProductSales) * 100).toFixed(2) + '%';
-      
-      bumpConversionRates[mainProduct][bumpProduct] = {
-        quantidade: bumpCount,
-        taxa: rate,
-        basePrincipal: mainProductSales
-      };
-    });
+    bumpConversionRates[mainProduct][bumpProduct] = {
+      quantidade: bumpCount,
+      taxa: rate,
+      basePrincipal: mainProductSales
+    };
   });
+});
+
+// Debug log para verificação
+console.log('=== DEBUG BUMPS ===');
+console.log('Vendas diretas por produto:', productSalesCount);
+console.log('Relações de bump:', bumpRelations);
+console.log('Taxas calculadas:', bumpConversionRates);
   
 // ===== REEMBOLSOS - COM MAPEAMENTO CORRETO =====
 const allTransactions = parsed.data;
