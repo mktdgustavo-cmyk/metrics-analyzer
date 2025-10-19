@@ -335,7 +335,80 @@ function App() {
             ))}
           </div>
         </div>
+{/* TAXAS DE BUMP DINÂMICAS - NOVO SISTEMA */}
+{results.bumpConversionRates && Object.keys(results.bumpConversionRates).length > 0 && (
+  <div className="bg-white rounded-lg shadow p-6">
+    <h3 className="text-xl font-bold mb-4 text-gray-800">💎 Sistema de Bumps - Todas as Relações</h3>
+    <p className="text-sm text-gray-600 mb-4">
+      Taxas de conversão automáticas para cada produto principal → bump
+    </p>
+    
+    <div className="space-y-4">
+      {Object.entries(results.bumpConversionRates).map(([mainProduct, bumps]) => (
+        <div key={mainProduct} className="border-2 border-purple-200 rounded-lg p-4 bg-purple-50">
+          <h4 className="font-semibold text-purple-800 mb-3">
+            🎯 {mainProduct}
+            <span className="text-sm text-gray-600 ml-2">
+              (base: {bumps[Object.keys(bumps)[0]].basePrincipal} vendas diretas)
+            </span>
+          </h4>
+          
+          <div className="space-y-2">
+            {Object.entries(bumps).map(([bumpProduct, data]) => (
+              <div key={bumpProduct} className="bg-white p-3 rounded border border-purple-300">
+                <div className="flex justify-between items-center">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-700">
+                      → {bumpProduct}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {data.quantidade} vendas como bump
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-purple-600">
+                      {data.taxa}
+                    </div>
+                    <div className="text-xs text-gray-500">conversão</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+    
+    {Object.keys(results.bumpConversionRates).length === 0 && (
+      <p className="text-sm text-gray-500 italic">
+        Nenhuma relação de bump detectada neste período
+      </p>
+    )}
+  </div>
+)}
 
+{/* REEMBOLSOS - GRAVA SIMPLES */}
+<div className="bg-white rounded-lg shadow p-6">
+  <h3 className="text-xl font-bold mb-4 text-gray-800">🔄 Reembolsos</h3>
+  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+    <div className="text-2xl font-bold text-red-600 mb-3">
+      Total: {results.refunds.total}
+    </div>
+    {Object.keys(results.refunds.byProduct).length > 0 ? (
+      <div className="space-y-2">
+        <h4 className="font-semibold text-sm text-gray-700 mb-2">Por Produto:</h4>
+        {Object.entries(results.refunds.byProduct).map(([product, count]) => (
+          <div key={product} className="flex justify-between bg-white p-2 rounded">
+            <span className="text-gray-700">{product}:</span>
+            <span className="font-bold text-red-600">{count}</span>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <p className="text-sm text-gray-600">Nenhum reembolso neste período 🎉</p>
+    )}
+  </div>
+</div>
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-xl font-bold mb-4 text-gray-800">🎯 Vendas por Origem</h3>
           {Object.entries(results.salesByOrigin).map(([product, origins]) => (
