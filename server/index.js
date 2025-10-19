@@ -34,19 +34,16 @@ function categorizarVendasLDR(vendas) {
   vendas.forEach(venda => {
     const oferta = (venda['Nome da oferta'] || '').toString().toLowerCase();
     
-    // Identificar LDR 77
     if (oferta.includes('[ldr] 77') || 
         oferta.includes('[77]') || 
         oferta.includes('renovação alunos - 67') || 
         oferta.includes('renovação alunos - 97')) {
       categorias.ldr77.push(venda);
     } 
-    // Identificar LDR 147
     else if (oferta.includes('[ldr] 147') || 
              oferta.includes('[147]')) {
       categorias.ldr147.push(venda);
     } 
-    // Outros casos
     else {
       categorias.outros.push(venda);
     }
@@ -114,7 +111,7 @@ const HOTMART_PRICE_MAPPINGS = {
   'wawx8lne': { product: 'Youtube', origin: 'N/A' }
 };
 
-// Processar Hubla - COM TODAS AS FEATURES
+// Processar Hubla - VERSÃO COMPLETA E OTIMIZADA
 function processHubla(csvText) {
   const parsed = Papa.parse(csvText, {
     header: true,
@@ -131,17 +128,24 @@ function processHubla(csvText) {
   const categoriasLDR = categorizarVendasLDR(ldrSales);
   const estatisticasLDR = calcularEstatisticasLDR(categoriasLDR);
   
-  const ldrByOrigin = {};
-  ldrSales.forEach(sale => {
+  // ===== VENDAS POR ORIGEM (TODOS OS PRODUTOS) =====
+  const allProducts = {};
+  const productsByOrigin = {};
+  
+  data.forEach(sale => {
+    const product = sale['Nome do produto'];
     const origin = getHublaOrigin(sale);
-    ldrByOrigin[origin] = (ldrByOrigin[origin] || 0) + 1;
+    
+    // Contar total por produto
+    allProducts[product] = (allProducts[product] || 0) + 1;
+    
+    // Contar por origem
+    if (!productsByOrigin[product]) productsByOrigin[product] = {};
+    productsByOrigin[product][origin] = (productsByOrigin[product][origin] || 0) + 1;
   });
   
-  const rnpByOrigin = {};
-  rnpSales.forEach(sale => {
-    const origin = getHublaOrigin(sale);
-    rnpByOrigin[origin] = (rnpByOrigin[origin] || 0) + 1;
-  });
+  const ldrByOrigin = productsByOrigin['Laboratório de Roteiros'] || {};
+  const rnpByOrigin = productsByOrigin['Roteiros na Prática'] || {};
   
   // ===== BUMPS GERAL =====
   const bumps = {};
@@ -166,29 +170,24 @@ function processHubla(csvText) {
   const bumps77 = {};
   const bumps147 = {};
   
-  // Processar bumps do LDR 77
   categoriasLDR.ldr77.forEach(sale => {
     const bumpNames = sale['Nome do produto de orderbump'];
     if (bumpNames) {
-      const bumpList = bumpNames.split(', ');
-      bumpList.forEach(bump => {
+      bumpNames.split(', ').forEach(bump => {
         bumps77[bump] = (bumps77[bump] || 0) + 1;
       });
     }
   });
   
-  // Processar bumps do LDR 147
   categoriasLDR.ldr147.forEach(sale => {
     const bumpNames = sale['Nome do produto de orderbump'];
     if (bumpNames) {
-      const bumpList = bumpNames.split(', ');
-      bumpList.forEach(bump => {
+      bumpNames.split(', ').forEach(bump => {
         bumps147[bump] = (bumps147[bump] || 0) + 1;
       });
     }
   });
   
-  // Calcular taxas de conversão por categoria
   const bumpRates77 = {};
   const bumpRates147 = {};
   
@@ -200,10 +199,34 @@ function processHubla(csvText) {
     bumpRates147[bump] = ((bumps147[bump] / categoriasLDR.ldr147.length) * 100).toFixed(2) + '%';
   });
   
-  // ===== REEMBOLSOS =====
-  const refunds = data.filter(r => r['Data de reembolso'] !== null);
-  const ldrRefunds = refunds.filter(r => r['Nome do produto'] === 'Laboratório de Roteiros').length;
-  const rnpRefunds = refunds.filter(r => r['Nome do produto'] === 'Roteiros na Prática').length;
+  // ===== REEMBOLSOS POR PRODUTO =====
+  const allRefunds = parsed.data.filter(r => 
+    r['Data de reembolso'] && 
+    r['Data de reembolso'] !== '' && 
+    r['Data de reembolso'] !== null
+  );
+  
+  const refundsByProduct = {};
+  allRefunds.forEach(r => {
+    const product = r['Nome do produto'];
+    refundsByProduct[product] = (refundsByProduct[product] || 0) + 1;
+  });
+  
+  const ldrRefunds = refundsByProduct['Laboratório de Roteiros'] || 0;
+  const rnpRefunds = refundsByProduct['Roteiros na Prática'] || 0;
+  
+  // ===== DETECÇÃO AUTOMÁTICA DE PRODUTOS DESCONHECIDOS =====
+  const knownProducts = ['Laboratório de Roteiros', 'Roteiros na Prática'];
+  const unknownProducts = {};
+  
+  Object.keys(allProducts).forEach(product => {
+    if (!knownProducts.includes(product)) {
+      unknownProducts[product] = {
+        quantidade: allProducts[product],
+        origens: productsByOrigin[product] || {}
+      };
+    }
+  });
   
   return {
     project: 'Perettas',
@@ -219,7 +242,9 @@ function processHubla(csvText) {
         total: rnpSales.length,
         byOrigin: rnpByOrigin,
         refunds: rnpRefunds
-      }
+      },
+      allProducts: allProducts,
+      productsByOrigin: productsByOrigin
     },
     bumps: {
       counts: bumps,
@@ -236,26 +261,53 @@ function processHubla(csvText) {
           totalVendas: categoriasLDR.ldr147.length
         }
       }
-    }
+    },
+    refunds: {
+      total: allRefunds.length,
+      byProduct: refundsByProduct
+    },
+    unknownProducts: unknownProducts
   };
 }
 
 function getHublaOrigin(sale) {
-  const origem = sale['UTM Origem'];
-  const termo = sale['UTM Termo'];
+  const origem = (sale['UTM Origem'] || '').toString().toLowerCase().trim();
+  const termo = (sale['UTM Termo'] || '').toString().toLowerCase().trim();
   
-  if (!origem || origem === 'null') return 'N/A';
+  if (!origem || origem === 'null' || origem === '') return 'N/A';
   
-  if (origem.toLowerCase() === 'meta-ads') return 'Trafego';
-  if (origem.toLowerCase() === 'instagram' && termo) {
-    return `Instagram | ${termo.charAt(0).toUpperCase() + termo.slice(1)}`;
+  // WhatsApp
+  if (origem.includes('whatsapp') || origem.includes('wpp')) {
+    if (termo.includes('renovacao') || termo.includes('renovação')) return 'Whatsapp | Renovação';
+    if (termo.includes('upsell')) return 'Whatsapp | Upsell';
+    return 'Whatsapp | Mensagens';
   }
-  if (origem.toLowerCase() === 'hubla') return 'Hubla | Área de membros';
+  
+  // Notion
+  if (origem.includes('notion')) return 'Notion';
+  
+  // Hubla
+  if (origem.includes('hubla')) return 'Hubla | Área de membros';
+  
+  // Meta Ads / Tráfego
+  if (origem.includes('meta-ads') || origem.includes('ads')) return 'Trafego';
+  
+  // Instagram (normalizar insta -> instagram)
+  if (origem.includes('insta')) {
+    if (termo.includes('destaques') || termo.includes('destaque')) return 'Instagram | Destaques';
+    if (termo.includes('bio')) return 'Instagram | Bio';
+    if (termo.includes('reels') || termo.includes('reel')) return 'Instagram | Reels';
+    if (termo.includes('stories') || termo.includes('story')) return 'Instagram | Stories';
+    return 'Instagram | Outros';
+  }
+  
+  // Active Campaign
+  if (origem.includes('active')) return 'Active | Recuperação';
   
   return 'N/A';
 }
 
-// Processar Hotmart
+// Processar Hotmart - COM DETECÇÃO DE NOVOS PRODUTOS
 function processHotmart(csvText) {
   const parsed = Papa.parse(csvText, {
     header: true,
@@ -269,12 +321,25 @@ function processHotmart(csvText) {
   
   const salesByProduct = {};
   const salesByOrigin = {};
+  const unknownCodes = {};
   
   data.forEach(sale => {
     const priceCode = sale['Código do preço'];
+    const productName = sale['Produto'];
     const mapping = HOTMART_PRICE_MAPPINGS[priceCode];
     
-    if (!mapping) return;
+    if (!mapping) {
+      // Produto/código não mapeado - detecção automática
+      if (!unknownCodes[priceCode]) {
+        unknownCodes[priceCode] = {
+          produto: productName,
+          quantidade: 0,
+          precoDeste: sale['Nome deste preço'] || 'N/A'
+        };
+      }
+      unknownCodes[priceCode].quantidade++;
+      return;
+    }
     
     const { product, origin } = mapping;
     
@@ -300,8 +365,8 @@ function processHotmart(csvText) {
   const descomplicaTotal = salesByProduct['Descomplica'] || 0;
   
   const bumpRates = {
-    'Checklist - Descomplica': ((checklistBumps / descomplicaTotal) * 100).toFixed(2) + '%',
-    'Iluminação - Descomplica': ((iluminacaoBumps / descomplicaTotal) * 100).toFixed(2) + '%'
+    'Checklist - Descomplica': descomplicaTotal > 0 ? ((checklistBumps / descomplicaTotal) * 100).toFixed(2) + '%' : '0%',
+    'Iluminação - Descomplica': descomplicaTotal > 0 ? ((iluminacaoBumps / descomplicaTotal) * 100).toFixed(2) + '%' : '0%'
   };
   
   return {
@@ -309,7 +374,8 @@ function processHotmart(csvText) {
     platform: 'Hotmart',
     sales: salesByProduct,
     salesByOrigin: salesByOrigin,
-    bumpRates: bumpRates
+    bumpRates: bumpRates,
+    unknownCodes: unknownCodes
   };
 }
 
