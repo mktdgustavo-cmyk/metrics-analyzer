@@ -322,6 +322,7 @@ function getHublaOrigin(sale) {
 }
 
 // Processar Hotmart - COM DETECÇÃO DE NOVOS PRODUTOS
+// Processar Hotmart - COM SISTEMA FLEXÍVEL DE BUMPS
 function processHotmart(csvText) {
   const parsed = Papa.parse(csvText, {
     header: true,
@@ -337,13 +338,13 @@ function processHotmart(csvText) {
   const salesByOrigin = {};
   const unknownCodes = {};
   
+  // ===== CONTAR VENDAS =====
   data.forEach(sale => {
     const priceCode = sale['Código do preço'];
     const productName = sale['Produto'];
     const mapping = HOTMART_PRICE_MAPPINGS[priceCode];
     
     if (!mapping) {
-      // Produto/código não mapeado - detecção automática
       if (!unknownCodes[priceCode]) {
         unknownCodes[priceCode] = {
           produto: productName,
@@ -363,6 +364,74 @@ function processHotmart(csvText) {
     salesByOrigin[product][origin] = (salesByOrigin[product][origin] || 0) + 1;
   });
   
+  // ===== SISTEMA AUTOMÁTICO DE DETECÇÃO DE BUMPS =====
+  const bumpRelations = {}; // { "ProdutoPrincipal": { "ProdutoBump": quantidade } }
+  const productSalesCount = {}; // Contar vendas diretas (não-bump) por produto
+  
+  data.forEach(sale => {
+    const mainTransaction = sale['Transação do Produto Principal'];
+    const currentProduct = sale['Produto'];
+    
+    if (mainTransaction && mainTransaction !== '(none)') {
+      // É um bump - encontrar o produto principal
+      const mainSale = data.find(s => 
+        s['Transação da venda'] === mainTransaction || 
+        s['Código da transação'] === mainTransaction
+      );
+      
+      if (mainSale) {
+        const mainProduct = mainSale['Produto'];
+        
+        if (!bumpRelations[mainProduct]) {
+          bumpRelations[mainProduct] = {};
+        }
+        
+        bumpRelations[mainProduct][currentProduct] = 
+          (bumpRelations[mainProduct][currentProduct] || 0) + 1;
+      }
+    } else {
+      // Venda direta (não é bump)
+      productSalesCount[currentProduct] = 
+        (productSalesCount[currentProduct] || 0) + 1;
+    }
+  });
+  
+  // ===== CALCULAR TAXAS DE CONVERSÃO DE BUMPS =====
+  const bumpConversionRates = {};
+  
+  Object.keys(bumpRelations).forEach(mainProduct => {
+    const mainProductSales = productSalesCount[mainProduct] || 0;
+    
+    if (mainProductSales === 0) return;
+    
+    bumpConversionRates[mainProduct] = {};
+    
+    Object.keys(bumpRelations[mainProduct]).forEach(bumpProduct => {
+      const bumpCount = bumpRelations[mainProduct][bumpProduct];
+      const rate = ((bumpCount / mainProductSales) * 100).toFixed(2) + '%';
+      
+      bumpConversionRates[mainProduct][bumpProduct] = {
+        quantidade: bumpCount,
+        taxa: rate,
+        basePrincipal: mainProductSales
+      };
+    });
+  });
+  
+  // ===== REEMBOLSOS =====
+  const allTransactions = parsed.data;
+  const refunds = allTransactions.filter(r => 
+    r['Status da transação'] === 'Reembolsado' ||
+    r['Status da transação'] === 'Cancelado'
+  );
+  
+  const refundsByProduct = {};
+  refunds.forEach(r => {
+    const product = r['Produto'];
+    refundsByProduct[product] = (refundsByProduct[product] || 0) + 1;
+  });
+  
+  // ===== COMPATIBILIDADE COM VERSÃO ANTERIOR (Descomplica específico) =====
   const bumpSales = data.filter(r => 
     r['Transação do Produto Principal'] && 
     r['Transação do Produto Principal'] !== '(none)'
@@ -376,11 +445,13 @@ function processHotmart(csvText) {
     r['Produto'] === 'Transforme suas aulas com iluminação profissional'
   ).length;
   
-  const descomplicaTotal = salesByProduct['Descomplica'] || 0;
+  const descomplicaTotal = productSalesCount['OBS Studio para INFOPRODUTORES'] || 0;
   
-  const bumpRates = {
-    'Checklist - Descomplica': descomplicaTotal > 0 ? ((checklistBumps / descomplicaTotal) * 100).toFixed(2) + '%' : '0%',
-    'Iluminação - Descomplica': descomplicaTotal > 0 ? ((iluminacaoBumps / descomplicaTotal) * 100).toFixed(2) + '%' : '0%'
+  const legacyBumpRates = {
+    'Checklist - Descomplica': descomplicaTotal > 0 ? 
+      ((checklistBumps / descomplicaTotal) * 100).toFixed(2) + '%' : '0%',
+    'Iluminação - Descomplica': descomplicaTotal > 0 ? 
+      ((iluminacaoBumps / descomplicaTotal) * 100).toFixed(2) + '%' : '0%'
   };
   
   return {
@@ -388,7 +459,13 @@ function processHotmart(csvText) {
     platform: 'Hotmart',
     sales: salesByProduct,
     salesByOrigin: salesByOrigin,
-    bumpRates: bumpRates,
+    bumpRates: legacyBumpRates, // Mantém compatibilidade
+    bumpRelations: bumpRelations, // NOVO: Relações completas
+    bumpConversionRates: bumpConversionRates, // NOVO: Taxas dinâmicas
+    refunds: {
+      total: refunds.length,
+      byProduct: refundsByProduct
+    },
     unknownCodes: unknownCodes
   };
 }
