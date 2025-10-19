@@ -75,12 +75,14 @@ function calcularEstatisticasLDR(categorias) {
   };
 }
 
-// Mapeamentos Hotmart
 const HOTMART_PRICE_MAPPINGS = {
+  // Descomplica OBS
   '997e3yhk': { product: 'Descomplica', origin: 'Ads - Page' },
   'gyy2gzop': { product: 'Descomplica', origin: 'N/A' },
   '2pzpv0td': { product: 'Descomplica', origin: 'Whatsapp Upsell' },
   '1yflbmft': { product: 'Descomplica', origin: 'Ads - Page com VSL' },
+  
+  // Checklist
   'j5jzrlt1': { product: 'Checklist', origin: 'N/A' },
   '4oeu5x7p': { product: 'Checklist', origin: 'Bump Descomplica' },
   'xtg98r9p': { product: 'Checklist', origin: 'Bump Descomplica' },
@@ -88,12 +90,16 @@ const HOTMART_PRICE_MAPPINGS = {
   '59um3csu': { product: 'Checklist', origin: 'Ads' },
   '7vtjjnnt': { product: 'Checklist', origin: 'Ads' },
   '024nuedz': { product: 'Checklist', origin: 'Ads' },
+  
+  // Iluminação
   'icm6fa9c': { product: 'Iluminação profissional', origin: 'N/A' },
   'jf0ztef5': { product: 'Iluminação profissional', origin: 'Bump Descomplica' },
   '460lfl63': { product: 'Iluminação profissional', origin: 'Bump Descomplica' },
   'v046zzii': { product: 'Iluminação profissional', origin: 'Ads' },
   'bzpif1xj': { product: 'Iluminação profissional', origin: 'Ads' },
   'p0d170xv': { product: 'Iluminação profissional', origin: 'Ads' },
+  
+  // Grava Simples
   'touesadl': { product: 'Monitoria/Grava Simples', origin: 'N/A' },
   '38erp7wk': { product: 'Grava Simples/Consultoria', origin: 'Renata' },
   'bb391y5l': { product: 'Monitoria/Grava Simples', origin: 'N/A' },
@@ -107,8 +113,16 @@ const HOTMART_PRICE_MAPPINGS = {
   'vxwamur3': { product: 'Grava Simples/Consultoria', origin: 'N/A' },
   'w9allmjk': { product: 'Grava Simples/Consultoria', origin: 'N/A' },
   '775p3wjv': { product: 'Monitoria/Grava Simples', origin: 'N/A' },
+  
+  // Executa Infoprodutor
   'ce8nr3lp': { product: 'Executa Infoprodutor', origin: 'Campanha' },
-  'wawx8lne': { product: 'Youtube', origin: 'N/A' }
+  'lzyrnd2p': { product: 'Executa Infoprodutor', origin: 'Parcelamento' },
+  
+  // Youtube
+  'wawx8lne': { product: 'Youtube', origin: 'N/A' },
+  
+  // Cenário Virtual - NOVO PRODUTO
+  '76kuoixy': { product: 'Cenário Virtual', origin: 'N/A' }
 };
 
 // Processar Hubla - VERSÃO COMPLETA E OTIMIZADA
