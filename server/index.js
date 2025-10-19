@@ -418,18 +418,28 @@ function processHotmart(csvText) {
     });
   });
   
-  // ===== REEMBOLSOS =====
-  const allTransactions = parsed.data;
-  const refunds = allTransactions.filter(r => 
-    r['Status da transação'] === 'Reembolsado' ||
-    r['Status da transação'] === 'Cancelado'
-  );
+// ===== REEMBOLSOS - COM MAPEAMENTO CORRETO =====
+const allTransactions = parsed.data;
+const refunds = allTransactions.filter(r => 
+  r['Status da transação'] === 'Reembolsado' ||
+  r['Status da transação'] === 'Cancelado'
+);
+
+const refundsByProduct = {};
+refunds.forEach(r => {
+  const priceCode = r['Código do preço'];
+  const mapping = HOTMART_PRICE_MAPPINGS[priceCode];
   
-  const refundsByProduct = {};
-  refunds.forEach(r => {
-    const product = r['Produto'];
+  if (mapping) {
+    // Usa o mapeamento para diferenciar Monitoria vs Consultoria
+    const { product } = mapping;
     refundsByProduct[product] = (refundsByProduct[product] || 0) + 1;
-  });
+  } else {
+    // Se não houver mapeamento, usa o nome do produto direto
+    const productName = r['Produto'];
+    refundsByProduct[productName] = (refundsByProduct[productName] || 0) + 1;
+  }
+});
   
   // ===== COMPATIBILIDADE COM VERSÃO ANTERIOR (Descomplica específico) =====
   const bumpSales = data.filter(r => 
