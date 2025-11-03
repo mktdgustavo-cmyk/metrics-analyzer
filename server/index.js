@@ -328,17 +328,24 @@ function processHubla(csvText) {
     bumpRates147[bump] = base > 0 ? ((bumps147[bump] / base) * 100).toFixed(2) + '%' : '0%';
   });
   
-  // ===== REEMBOLSOS =====
-  const refunds = data.filter(r => r['Data de reembolso'] !== null);
-  const ldrRefunds = refunds.filter(r => {
-    const produtoIdentificado = identificarProduto(r['Nome do produto']);
-    return produtoIdentificado === 'Laboratório de Roteiros';
-  }).length;
-  
-  const rnpRefunds = refunds.filter(r => {
-    const produtoIdentificado = identificarProduto(r['Nome do produto']);
-    return produtoIdentificado === 'Roteiros na Prática';
-  }).length;
+// ===== REEMBOLSOS - CORRIGIDO =====
+// Buscar em parsed.data (TODOS os registros), não só em "data" (vendas pagas)
+const allData = parsed.data;
+const refunds = allData.filter(r => 
+  r['Status da fatura'] === 'Reembolsada' || 
+  r['Status da fatura'] === 'Cancelada' ||
+  (r['Data de reembolso'] !== null && r['Data de reembolso'] !== '')
+);
+
+const ldrRefunds = refunds.filter(r => {
+  const produtoIdentificado = identificarProduto(r['Nome do produto']);
+  return produtoIdentificado === 'Laboratório de Roteiros';
+}).length;
+
+const rnpRefunds = refunds.filter(r => {
+  const produtoIdentificado = identificarProduto(r['Nome do produto']);
+  return produtoIdentificado === 'Roteiros na Prática';
+}).length;
   
   return {
     project: 'Perettas',
