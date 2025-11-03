@@ -94,9 +94,9 @@ function App() {
             ))}
           </div>
           {results.sales.ldr.refunds > 0 && (
-            <div className="mt-2 text-red-600">
-              Reembolsos: {results.sales.ldr.refunds}
-            </div>
+            <div className={`mt-2 ${results.sales.ldr.refunds > 0 ? 'text-red-600' : 'text-gray-500'}`}>
+  Reembolsos: {results.sales.ldr.refunds}
+</div>
           )}
         </div>
 
@@ -111,9 +111,9 @@ function App() {
             ))}
           </div>
           {results.sales.rnp.refunds > 0 && (
-            <div className="mt-2 text-red-600">
-              Reembolsos: {results.sales.rnp.refunds}
-            </div>
+           <div className={`mt-2 ${results.sales.rnp.refunds > 0 ? 'text-red-600' : 'text-gray-500'}`}>
+  Reembolsos: {results.sales.rnp.refunds}
+</div>
           )}
         </div>
       </div>
