@@ -111,7 +111,7 @@ function App() {
     Reembolsos: {results.sales.rnp.refunds}
   </div>
 </div>
-
+ ))}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-xl font-bold mb-4 text-gray-800">💎 Bumps - Taxa de Conversão</h3>
 
