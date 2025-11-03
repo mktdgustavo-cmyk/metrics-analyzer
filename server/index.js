@@ -742,22 +742,18 @@ refunds.forEach(r => {
 }
 
 // Endpoints - COM SUPORTE A XLSX
-app.post('/api/process/hubla', upload.single('file'), (req, res) => {
-  try {
-    let csvText;
-    const fileName = req.file.originalname.toLowerCase();
-    
-    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
-      csvText = xlsxToCSV(req.file.buffer);
-    } else {
-      csvText = req.file.buffer.toString('utf-8');
-    }
-    
-    const result = processHubla(csvText);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+app.post('/api/process-hubla', upload.single('file'), (req, res) => {
+  const fileContent = fs.readFileSync(req.file.path, 'utf8');
+  const parsed = Papa.parse(fileContent, { 
+    header: true, 
+    dynamicTyping: true,
+    skipEmptyLines: true 
+  });
+  
+  const results = processHubla(parsed.data);
+  
+  fs.unlinkSync(req.file.path);
+  res.json(results);
 });
 
 app.post('/api/process/hotmart', upload.single('file'), (req, res) => {
