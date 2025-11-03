@@ -33,9 +33,13 @@ function App() {
         ? '/api/process-hubla' 
         : '/api/process-hotmart';
 
-      console.log('Enviando para:', endpoint);
+      // Detectar se está em produção ou desenvolvimento
+      const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const baseURL = isDevelopment ? 'http://localhost:80' : '';
+      
+      console.log('Enviando para:', `${baseURL}${endpoint}`);
 
-      const response = await fetch(`http://localhost:3000${endpoint}`, {
+      const response = await fetch(`${baseURL}${endpoint}`, {
         method: 'POST',
         body: formData
       });
@@ -116,7 +120,7 @@ function App() {
             <p className="font-bold">❌ Erro</p>
             <p>{error}</p>
             <p className="text-sm mt-2">
-              💡 Dica: Verifique se o servidor está rodando em http://localhost:3000
+              💡 Dica: Verifique se o servidor está rodando (porta 80 em produção ou porta 80 local)
             </p>
           </div>
         )}
