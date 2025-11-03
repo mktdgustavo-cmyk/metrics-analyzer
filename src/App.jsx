@@ -8,18 +8,22 @@ function App() {
   const [error, setError] = useState(null);
 
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
+    const selectedFile = e.target.files[0];
+    setFile(selectedFile);
     setError(null);
+    setResults(null);
+    console.log('Arquivo selecionado:', selectedFile?.name);
   };
 
   const handleProcess = async () => {
     if (!file) {
-      setError('Por favor, selecione um arquivo');
+      setError('Por favor, selecione um arquivo CSV ou XLSX');
       return;
     }
 
     setLoading(true);
     setError(null);
+    setResults(null);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -29,17 +33,27 @@ function App() {
         ? '/api/process-hubla' 
         : '/api/process-hotmart';
 
-      const response = await fetch(`http://localhost:5000${endpoint}`, {
+      console.log('Enviando para:', endpoint);
+
+      const response = await fetch(`http://localhost:3000${endpoint}`, {
         method: 'POST',
         body: formData
       });
 
-      if (!response.ok) throw new Error('Erro ao processar arquivo');
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro ${response.status}: ${errorText}`);
+      }
 
       const data = await response.json();
+      console.log('Dados recebidos:', data);
+      
       setResults(data);
     } catch (err) {
-      setError(err.message);
+      console.error('Erro completo:', err);
+      setError(`Erro ao processar: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -59,7 +73,11 @@ function App() {
           </label>
           <select
             value={selectedProject}
-            onChange={(e) => setSelectedProject(e.target.value)}
+            onChange={(e) => {
+              setSelectedProject(e.target.value);
+              setResults(null);
+              setError(null);
+            }}
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="perettas">Perettas (Hubla)</option>
@@ -74,23 +92,40 @@ function App() {
           </label>
           <input
             type="file"
-            accept=".csv,.xlsx"
+            accept=".csv,.xlsx,.xls"
             onChange={handleFileChange}
-            className="w-full p-3 border border-gray-300 rounded-lg"
+            className="w-full p-3 border border-gray-300 rounded-lg mb-4"
           />
+          {file && (
+            <p className="text-sm text-gray-600 mb-4">
+              Arquivo selecionado: <strong>{file.name}</strong>
+            </p>
+          )}
           <button
             onClick={handleProcess}
-            disabled={loading}
-            className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition disabled:opacity-50"
+            disabled={loading || !file}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Processando...' : 'Processar Planilha'}
+            {loading ? '⏳ Processando...' : '🚀 Processar Planilha'}
           </button>
         </div>
 
         {/* Erro */}
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
-            {error}
+          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded">
+            <p className="font-bold">❌ Erro</p>
+            <p>{error}</p>
+            <p className="text-sm mt-2">
+              💡 Dica: Verifique se o servidor está rodando em http://localhost:3000
+            </p>
+          </div>
+        )}
+
+        {/* Loading */}
+        {loading && (
+          <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-6 rounded">
+            <p className="font-bold">⏳ Processando planilha...</p>
+            <p className="text-sm">Aguarde enquanto analisamos os dados</p>
           </div>
         )}
 
@@ -109,22 +144,40 @@ function App() {
 
             {/* Alertas de produtos não mapeados */}
             {results.unmappedProducts && results.unmappedProducts.length > 0 && (
-              <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded-lg">
+              <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 px-4 py-3 rounded">
                 <h4 className="font-bold mb-2">⚠️ Produtos não identificados:</h4>
-                <ul className="list-disc list-inside">
+                <ul className="list-disc list-inside text-sm">
                   {results.unmappedProducts.map((p, i) => (
                     <li key={i}>{p}</li>
                   ))}
                 </ul>
+                <p className="text-xs mt-2">
+                  Esses produtos não foram reconhecidos. Adicione-os ao PRODUCT_CONFIG.
+                </p>
               </div>
             )}
+
+            {/* Resumo Geral */}
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+              <h3 className="text-xl font-bold mb-4">📈 Resumo Geral</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm opacity-90">Total de Vendas</div>
+                  <div className="text-3xl font-bold">{results.totalSales}</div>
+                </div>
+                <div>
+                  <div className="text-sm opacity-90">Total de Reembolsos</div>
+                  <div className="text-3xl font-bold">{results.totalRefunds}</div>
+                </div>
+              </div>
+            </div>
 
             {/* Vendas por Produto */}
             <div className="bg-white rounded-lg shadow-lg p-6">
               <h3 className="text-xl font-bold mb-4 text-gray-800">💰 Vendas por Produto</h3>
               <div className="space-y-4">
                 {Object.entries(results.sales).map(([key, data]) => (
-                  <div key={key} className="border-l-4 border-blue-500 pl-4">
+                  <div key={key} className="border-l-4 border-blue-500 pl-4 py-2 bg-gray-50 rounded">
                     <div className="flex justify-between items-center mb-2">
                       <h4 className="font-semibold text-lg">{data.displayName}</h4>
                       <span className="text-2xl font-bold text-blue-600">
@@ -133,10 +186,10 @@ function App() {
                     </div>
                     
                     {/* Origem */}
-                    <div className="text-sm space-y-1">
+                    <div className="text-sm space-y-1 ml-4">
                       {Object.entries(data.byOrigin).map(([origin, count]) => (
                         <div key={origin} className="flex justify-between text-gray-600">
-                          <span>{origin}:</span>
+                          <span>📍 {origin}:</span>
                           <span className="font-medium">{count}</span>
                         </div>
                       ))}
@@ -144,7 +197,7 @@ function App() {
                     
                     {/* Reembolsos */}
                     {results.refunds[key] > 0 && (
-                      <div className="mt-2 text-red-600 text-sm">
+                      <div className="mt-2 text-red-600 text-sm font-medium">
                         ❌ Reembolsos: {results.refunds[key]}
                       </div>
                     )}
@@ -155,28 +208,30 @@ function App() {
 
             {/* Categorias LDR */}
             {results.ldrCategories && results.ldrCategories.quantities && (
+              results.ldrCategories.quantities.ldr77 > 0 || results.ldrCategories.quantities.ldr147 > 0
+            ) && (
               <div className="bg-white rounded-lg shadow-lg p-6">
                 <h3 className="text-xl font-bold mb-4 text-gray-800">
                   📊 Distribuição LDR (77 vs 147)
                 </h3>
                 
                 <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg text-center">
-                    <div className="text-sm text-gray-600 mb-1">LDR 77</div>
-                    <div className="text-3xl font-bold text-blue-600">
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg text-center border-2 border-blue-200">
+                    <div className="text-sm text-gray-600 mb-2">LDR 77</div>
+                    <div className="text-4xl font-bold text-blue-600 mb-2">
                       {results.ldrCategories.quantities.ldr77}
                     </div>
-                    <div className="text-lg text-gray-700 mt-1">
+                    <div className="text-xl font-semibold text-blue-700">
                       {results.ldrCategories.percentages.ldr77}
                     </div>
                   </div>
                   
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg text-center">
-                    <div className="text-sm text-gray-600 mb-1">LDR 147</div>
-                    <div className="text-3xl font-bold text-purple-600">
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg text-center border-2 border-purple-200">
+                    <div className="text-sm text-gray-600 mb-2">LDR 147</div>
+                    <div className="text-4xl font-bold text-purple-600 mb-2">
                       {results.ldrCategories.quantities.ldr147}
                     </div>
-                    <div className="text-lg text-gray-700 mt-1">
+                    <div className="text-xl font-semibold text-purple-700">
                       {results.ldrCategories.percentages.ldr147}
                     </div>
                   </div>
@@ -187,7 +242,7 @@ function App() {
                   results.ldrCategories.quantities.outros > 0) && (
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     {results.ldrCategories.quantities.ldr244 > 0 && (
-                      <div className="bg-gray-50 p-3 rounded text-center">
+                      <div className="bg-gray-50 p-3 rounded text-center border border-gray-200">
                         <div className="text-gray-600">LDR 244</div>
                         <div className="font-bold text-gray-800">
                           {results.ldrCategories.quantities.ldr244} ({results.ldrCategories.percentages.ldr244})
@@ -195,7 +250,7 @@ function App() {
                       </div>
                     )}
                     {results.ldrCategories.quantities.outros > 0 && (
-                      <div className="bg-gray-50 p-3 rounded text-center">
+                      <div className="bg-gray-50 p-3 rounded text-center border border-gray-200">
                         <div className="text-gray-600">Outros</div>
                         <div className="font-bold text-gray-800">
                           {results.ldrCategories.quantities.outros} ({results.ldrCategories.percentages.outros})
@@ -224,16 +279,16 @@ function App() {
                       {Object.entries(productData.bumps).map(([bumpKey, bumpData]) => (
                         <div 
                           key={bumpKey} 
-                          className="flex items-center justify-between bg-gray-50 p-3 rounded-lg"
+                          className="flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200"
                         >
                           <div>
-                            <div className="font-medium">{bumpData.displayName}</div>
+                            <div className="font-medium text-gray-800">{bumpData.displayName}</div>
                             <div className="text-xs text-gray-500">
-                              Base: {bumpData.basePrincipal} vendas
+                              Base: {bumpData.basePrincipal} vendas principais
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-2xl font-bold text-green-600">
+                            <div className="text-3xl font-bold text-green-600">
                               {bumpData.taxa}
                             </div>
                             <div className="text-sm text-gray-600">
@@ -247,31 +302,16 @@ function App() {
                 ))}
               </div>
             )}
-
-            {/* Resumo */}
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
-              <h3 className="text-xl font-bold mb-4">📈 Resumo Geral</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-sm opacity-90">Total de Vendas</div>
-                  <div className="text-3xl font-bold">{results.totalSales}</div>
-                </div>
-                <div>
-                  <div className="text-sm opacity-90">Total de Reembolsos</div>
-                  <div className="text-3xl font-bold">{results.totalRefunds}</div>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
-        {/* Resultados - GRAVAÇÃO (placeholder) */}
+        {/* Resultados - GRAVAÇÃO */}
         {results && selectedProject === 'gravacao' && (
           <div className="bg-white rounded-lg shadow-lg p-6">
-            <h3 className="text-xl font-bold text-gray-800">
-              Resultados da Gravação (Hotmart)
+            <h3 className="text-xl font-bold text-gray-800 mb-4">
+              🎬 Resultados da Gravação (Hotmart)
             </h3>
-            <pre className="mt-4 text-xs overflow-auto">
+            <pre className="bg-gray-100 p-4 rounded text-xs overflow-auto">
               {JSON.stringify(results, null, 2)}
             </pre>
           </div>
