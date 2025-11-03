@@ -125,202 +125,463 @@ const HOTMART_PRICE_MAPPINGS = {
   '76kuoixy': { product: 'Cenário Virtual', origin: 'N/A' }
 };
 
-// Processar Hubla - VERSÃO COMPLETA E OTIMIZADA
-function processHubla(csvText) {
-  const parsed = Papa.parse(csvText, {
-    header: true,
-    dynamicTyping: true,
-    skipEmptyLines: true
-  });
+// ============================================
+// SISTEMA ROBUSTO DE IDENTIFICAÇÃO DE PRODUTOS
+// ============================================
 
-  const data = parsed.data.filter(r => r['Status da fatura'] === 'Paga');
+// CONFIGURAÇÃO: Aliases e padrões para cada produto
+const PRODUCT_CONFIG = {
+  ldr: {
+    displayName: 'Laboratório de Roteiros',
+    aliases: [
+      'laboratório de roteiros',
+      'laboratorio de roteiros',
+      'lab de roteiros',
+      'ldr',
+      'roteiros lab'
+    ],
+    patterns: [/laborat[oó]rio.*roteiros/i, /\bldr\b/i],
+    hasBumps: true,
+    isMainProduct: true
+  },
   
-  const ldrSales = data.filter(r => r['Nome do produto'] === 'Laboratório de Roteiros');
-  const rnpSales = data.filter(r => r['Nome do produto'] === 'Roteiros na Prática');
+  rnp: {
+    displayName: 'Roteiros na Prática',
+    aliases: [
+      'roteiros na prática',
+      'roteiros na pratica',
+      'rnp',
+      'roteiro pratica'
+    ],
+    patterns: [/roteiros?\s+na\s+pr[aá]tica/i, /\brnp\b/i],
+    hasBumps: false,
+    isMainProduct: true,
+    isUpsell: true,
+    upsellOf: 'ldr'
+  },
   
-  // ===== CATEGORIZAÇÃO LDR 77 vs 147 =====
-  const categoriasLDR = categorizarVendasLDR(ldrSales);
-  const estatisticasLDR = calcularEstatisticasLDR(categoriasLDR);
+  brainstorming: {
+    displayName: 'Brainstorming',
+    aliases: [
+      'brainstorming',
+      'assessoria',
+      'consultoria',
+      'assessoria de conteúdo'
+    ],
+    patterns: [/brainstorming/i, /assessoria/i, /consultoria/i],
+    hasBumps: false,
+    isMainProduct: true,
+    isHighTicket: true
+  },
   
-  // ===== VENDAS POR ORIGEM (TODOS OS PRODUTOS) =====
-  const allProducts = {};
-  const productsByOrigin = {};
+  pack_anuncios: {
+    displayName: 'Pack Anúncios Penoni',
+    aliases: [
+      'pack vitalício',
+      'anúncios penoni',
+      'pack penoni'
+    ],
+    patterns: [/pack.*vitalício/i, /anúncios.*penoni/i, /pack.*penoni/i],
+    hasBumps: false,
+    isMainProduct: false,
+    isBump: true,
+    bumpOf: 'ldr'
+  },
   
-  data.forEach(sale => {
-    const product = sale['Nome do produto'];
-    const origin = getHublaOrigin(sale);
-    
-    // Contar total por produto
-    allProducts[product] = (allProducts[product] || 0) + 1;
-    
-    // Contar por origem
-    if (!productsByOrigin[product]) productsByOrigin[product] = {};
-    productsByOrigin[product][origin] = (productsByOrigin[product][origin] || 0) + 1;
-  });
+  viralzometro: {
+    displayName: 'Viralzômetro',
+    aliases: [
+      'viralzômetro',
+      'viralzometro',
+      'checklist post'
+    ],
+    patterns: [/viralz[oô]metro/i, /checklist.*post/i],
+    hasBumps: false,
+    isMainProduct: false,
+    isBump: true,
+    bumpOf: 'ldr'
+  },
   
-  const ldrByOrigin = productsByOrigin['Laboratório de Roteiros'] || {};
-  const rnpByOrigin = productsByOrigin['Roteiros na Prática'] || {};
+  capcut: {
+    displayName: 'Viralizando com CapCut',
+    aliases: [
+      'viralizando com capcut',
+      'capcut',
+      'edição capcut'
+    ],
+    patterns: [/viralizando.*capcut/i, /capcut/i],
+    hasBumps: false,
+    isMainProduct: false,
+    isBump: true,
+    bumpOf: 'ldr'
+  },
   
-  // ===== BUMPS GERAL =====
-  const bumps = {};
-  const ldrSalesWithBump = ldrSales.filter(s => s['Nome do produto de orderbump']);
+  pmc: {
+    displayName: 'Alcance de Milhões',
+    aliases: [
+      'alcance de milhões',
+      'alcance milhões',
+      'pmc'
+    ],
+    patterns: [/\[?pmc\]?/i, /alcance.*milh[õo]es/i],
+    hasBumps: false,
+    isMainProduct: false,
+    isBump: true,
+    bumpOf: 'ldr'
+  },
   
-  ldrSalesWithBump.forEach(sale => {
-    const bumpNames = sale['Nome do produto de orderbump'];
-    if (bumpNames) {
-      const bumpList = bumpNames.split(', ');
-      bumpList.forEach(bump => {
-        bumps[bump] = (bumps[bump] || 0) + 1;
-      });
-    }
-  });
+  desafio_10dias: {
+    displayName: 'Desafio Viralizando em 10 Dias',
+    aliases: [
+      'desafio viralizando',
+      'desafio 10 dias',
+      'viralizando 10 dias'
+    ],
+    patterns: [/desafio.*viralizando/i, /viralizando.*10.*dias/i, /desafio.*10.*dias/i],
+    hasBumps: false,
+    isMainProduct: true,
+    isFrontEnd: true
+  }
+};
+
+// ============================================
+// FUNÇÃO DE IDENTIFICAÇÃO DE PRODUTO
+// ============================================
+
+function identificarProduto(nomeProduto) {
+  if (!nomeProduto) return null;
   
-  const bumpRates = {};
-  Object.keys(bumps).forEach(bump => {
-    bumpRates[bump] = ((bumps[bump] / ldrSales.length) * 100).toFixed(2) + '%';
-  });
+  const nome = nomeProduto.trim().toLowerCase();
   
-  // ===== BUMPS POR CATEGORIA (77 vs 147) =====
-  const bumps77 = {};
-  const bumps147 = {};
-  
-  categoriasLDR.ldr77.forEach(sale => {
-    const bumpNames = sale['Nome do produto de orderbump'];
-    if (bumpNames) {
-      bumpNames.split(', ').forEach(bump => {
-        bumps77[bump] = (bumps77[bump] || 0) + 1;
-      });
-    }
-  });
-  
-  categoriasLDR.ldr147.forEach(sale => {
-    const bumpNames = sale['Nome do produto de orderbump'];
-    if (bumpNames) {
-      bumpNames.split(', ').forEach(bump => {
-        bumps147[bump] = (bumps147[bump] || 0) + 1;
-      });
-    }
-  });
-  
-  const bumpRates77 = {};
-  const bumpRates147 = {};
-  
-  Object.keys(bumps77).forEach(bump => {
-    bumpRates77[bump] = ((bumps77[bump] / categoriasLDR.ldr77.length) * 100).toFixed(2) + '%';
-  });
-  
-  Object.keys(bumps147).forEach(bump => {
-    bumpRates147[bump] = ((bumps147[bump] / categoriasLDR.ldr147.length) * 100).toFixed(2) + '%';
-  });
-  
-  // ===== REEMBOLSOS POR PRODUTO =====
-  const allRefunds = parsed.data.filter(r => 
-    r['Data de reembolso'] && 
-    r['Data de reembolso'] !== '' && 
-    r['Data de reembolso'] !== null
-  );
-  
-  const refundsByProduct = {};
-  allRefunds.forEach(r => {
-    const product = r['Nome do produto'];
-    refundsByProduct[product] = (refundsByProduct[product] || 0) + 1;
-  });
-  
-  const ldrRefunds = refundsByProduct['Laboratório de Roteiros'] || 0;
-  const rnpRefunds = refundsByProduct['Roteiros na Prática'] || 0;
-  
-  // ===== DETECÇÃO AUTOMÁTICA DE PRODUTOS DESCONHECIDOS =====
-  const knownProducts = ['Laboratório de Roteiros', 'Roteiros na Prática'];
-  const unknownProducts = {};
-  
-  Object.keys(allProducts).forEach(product => {
-    if (!knownProducts.includes(product)) {
-      unknownProducts[product] = {
-        quantidade: allProducts[product],
-        origens: productsByOrigin[product] || {}
+  // Tentar match exato por alias
+  for (const [key, config] of Object.entries(PRODUCT_CONFIG)) {
+    if (config.aliases.some(alias => nome === alias)) {
+      return {
+        key,
+        config,
+        confidence: 'high'
       };
     }
-  });
+  }
   
+  // Tentar match por padrão regex
+  for (const [key, config] of Object.entries(PRODUCT_CONFIG)) {
+    if (config.patterns.some(pattern => pattern.test(nomeProduto))) {
+      return {
+        key,
+        config,
+        confidence: 'medium'
+      };
+    }
+  }
+  
+  // Tentar match parcial (fallback)
+  for (const [key, config] of Object.entries(PRODUCT_CONFIG)) {
+    if (config.aliases.some(alias => nome.includes(alias) || alias.includes(nome))) {
+      return {
+        key,
+        config,
+        confidence: 'low'
+      };
+    }
+  }
+  
+  // Produto não identificado
   return {
-    project: 'Perettas',
-    platform: 'Hubla',
-    sales: {
-      ldr: {
-        total: ldrSales.length,
-        byOrigin: ldrByOrigin,
-        refunds: ldrRefunds,
-        categorias: estatisticasLDR
-      },
-      rnp: {
-        total: rnpSales.length,
-        byOrigin: rnpByOrigin,
-        refunds: rnpRefunds
-      },
-      allProducts: allProducts,
-      productsByOrigin: productsByOrigin
+    key: 'unknown',
+    config: {
+      displayName: nomeProduto,
+      isMainProduct: false,
+      isBump: false
     },
-    bumps: {
-      counts: bumps,
-      conversionRates: bumpRates,
-      byCategory: {
-        ldr77: {
-          counts: bumps77,
-          conversionRates: bumpRates77,
-          totalVendas: categoriasLDR.ldr77.length
-        },
-        ldr147: {
-          counts: bumps147,
-          conversionRates: bumpRates147,
-          totalVendas: categoriasLDR.ldr147.length
-        }
-      }
-    },
-    refunds: {
-      total: allRefunds.length,
-      byProduct: refundsByProduct
-    },
-    unknownProducts: unknownProducts
+    confidence: 'none',
+    originalName: nomeProduto
   };
 }
 
-function getHublaOrigin(sale) {
-  const origem = (sale['UTM Origem'] || '').toString().toLowerCase().trim();
-  const termo = (sale['UTM Termo'] || '').toString().toLowerCase().trim();
+// ============================================
+// FUNÇÃO DE CATEGORIZAÇÃO LDR (77 vs 147)
+// ============================================
+
+function categorizarLDR(oferta) {
+  if (!oferta) return 'outros';
   
-  if (!origem || origem === 'null' || origem === '') return 'N/A';
+  const ofertaLower = oferta.toLowerCase();
+  
+  // LDR 77
+  if (ofertaLower.includes('[ldr] 77') || 
+      ofertaLower.includes('[77]') ||
+      ofertaLower.includes('renovação alunos - 67') ||
+      ofertaLower.includes('renovação alunos - 97') ||
+      ofertaLower.includes('renovacao alunos - 67') ||
+      ofertaLower.includes('renovacao alunos - 97')) {
+    return 'ldr77';
+  }
+  
+  // LDR 147
+  if (ofertaLower.includes('[ldr] 147') || 
+      ofertaLower.includes('[147]')) {
+    return 'ldr147';
+  }
+  
+  // LDR 244
+  if (ofertaLower.includes('[ldr] 244') || 
+      ofertaLower.includes('[244]')) {
+    return 'ldr244';
+  }
+  
+  return 'outros';
+}
+
+// ============================================
+// NORMALIZAÇÃO DE ORIGEM (UTM)
+// ============================================
+
+function normalizeOrigin(utmOrigem, utmMidia, utmTermo) {
+  const sources = [utmOrigem, utmMidia, utmTermo]
+    .filter(s => s)
+    .map(s => s.toLowerCase());
+  
+  const allText = sources.join(' ');
   
   // WhatsApp
-  if (origem.includes('whatsapp') || origem.includes('wpp')) {
-    if (termo.includes('renovacao') || termo.includes('renovação')) return 'Whatsapp | Renovação';
-    if (termo.includes('upsell')) return 'Whatsapp | Upsell';
-    return 'Whatsapp | Mensagens';
+  if (allText.includes('whatsapp') || allText.includes('wpp') || 
+      allText.includes('whats') || allText.includes('zap')) {
+    return 'WhatsApp';
+  }
+  
+  // Instagram
+  if (allText.includes('instagram') || allText.includes('insta') || 
+      allText.includes('ig_') || allText.includes('reels') ||
+      allText.includes('story') || allText.includes('stories')) {
+    return 'Instagram';
   }
   
   // Notion
-  if (origem.includes('notion')) return 'Notion';
-  
-  // Hubla
-  if (origem.includes('hubla')) return 'Hubla | Área de membros';
-  
-  // Meta Ads / Tráfego
-  if (origem.includes('meta-ads') || origem.includes('ads')) return 'Trafego';
-  
-  // Instagram (normalizar insta -> instagram)
-  if (origem.includes('insta')) {
-    if (termo.includes('destaques') || termo.includes('destaque')) return 'Instagram | Destaques';
-    if (termo.includes('bio')) return 'Instagram | Bio';
-    if (termo.includes('reels') || termo.includes('reel')) return 'Instagram | Reels';
-    if (termo.includes('stories') || termo.includes('story')) return 'Instagram | Stories';
-    return 'Instagram | Outros';
+  if (allText.includes('notion')) {
+    return 'Notion';
   }
   
-  // Active Campaign
-  if (origem.includes('active')) return 'Active | Recuperação';
+  // Meta Ads / Facebook
+  if (allText.includes('meta') || allText.includes('facebook') || 
+      allText.includes('fb_') || allText.includes('fb-') ||
+      allText.includes('meta-ads') || allText.includes('metaads')) {
+    return 'Meta Ads';
+  }
   
-  return 'N/A';
+  // Google Ads
+  if (allText.includes('google') || allText.includes('adwords') || 
+      allText.includes('gads')) {
+    return 'Google Ads';
+  }
+  
+  // Email
+  if (allText.includes('email') || allText.includes('mail') || 
+      allText.includes('newsletter')) {
+    return 'Email';
+  }
+  
+  // YouTube
+  if (allText.includes('youtube') || allText.includes('yt')) {
+    return 'YouTube';
+  }
+  
+  // Tráfego Direto
+  if (allText.includes('direto') || allText.includes('direct') ||
+      allText.includes('trafego')) {
+    return 'Tráfego Direto';
+  }
+  
+  // Bio / Link na Bio
+  if (allText.includes('bio') || allText.includes('linktree')) {
+    return 'Link na Bio';
+  }
+  
+  return utmOrigem || 'N/A';
 }
 
+// ============================================
+// PROCESSAMENTO PRINCIPAL - HUBLA (PERETTAS)
+// ============================================
+
+function processHubla(data) {
+  // Filtrar apenas vendas pagas
+  const paidSales = data.filter(row => row['Status da fatura'] === 'Paga');
+  
+  // Estruturas de dados
+  const productSales = {};
+  const productRefunds = {};
+  const productOrigins = {};
+  const bumpRelations = {};
+  const ldrCategories = { ldr77: 0, ldr147: 0, ldr244: 0, outros: 0 };
+  const unmappedProducts = new Set();
+  
+  // Processar cada venda
+  paidSales.forEach(sale => {
+    const nomeProduto = sale['Nome do produto'];
+    const nomeBump = sale['Nome do produto de orderbump'];
+    const oferta = sale['Nome da oferta'];
+    const utmOrigem = sale['UTM Origem'];
+    const utmMidia = sale['UTM Mídia'];
+    const utmTermo = sale['UTM Termo'];
+    
+    // Identificar produto principal
+    const produtoInfo = identificarProduto(nomeProduto);
+    
+    if (produtoInfo.confidence === 'none') {
+      unmappedProducts.add(nomeProduto);
+    }
+    
+    const produtoKey = produtoInfo.key;
+    const produtoDisplay = produtoInfo.config.displayName;
+    
+    // Inicializar estruturas se necessário
+    if (!productSales[produtoKey]) {
+      productSales[produtoKey] = {
+        displayName: produtoDisplay,
+        total: 0,
+        byOrigin: {}
+      };
+      productRefunds[produtoKey] = 0;
+    }
+    
+    // Contar venda
+    productSales[produtoKey].total++;
+    
+    // Contar por origem
+    const origem = normalizeOrigin(utmOrigem, utmMidia, utmTermo);
+    if (!productSales[produtoKey].byOrigin[origem]) {
+      productSales[produtoKey].byOrigin[origem] = 0;
+    }
+    productSales[produtoKey].byOrigin[origem]++;
+    
+    // Categorizar LDR se for o caso
+    if (produtoKey === 'ldr') {
+      const categoria = categorizarLDR(oferta);
+      ldrCategories[categoria]++;
+    }
+    
+    // Processar bump se houver
+    if (nomeBump && nomeBump !== '') {
+      const bumpInfo = identificarProduto(nomeBump);
+      
+      if (bumpInfo.confidence === 'none') {
+        unmappedProducts.add(nomeBump);
+      }
+      
+      const bumpKey = bumpInfo.key;
+      const bumpDisplay = bumpInfo.config.displayName;
+      
+      // Inicializar relação de bump
+      if (!bumpRelations[produtoKey]) {
+        bumpRelations[produtoKey] = {};
+      }
+      if (!bumpRelations[produtoKey][bumpKey]) {
+        bumpRelations[produtoKey][bumpKey] = {
+          displayName: bumpDisplay,
+          count: 0
+        };
+      }
+      
+      bumpRelations[produtoKey][bumpKey].count++;
+    }
+  });
+  
+  // Processar reembolsos
+  const refunds = data.filter(row => 
+    row['Status da fatura'] === 'Reembolsada' || 
+    row['Status da fatura'] === 'Cancelada'
+  );
+  
+  refunds.forEach(refund => {
+    const nomeProduto = refund['Nome do produto'];
+    const produtoInfo = identificarProduto(nomeProduto);
+    const produtoKey = produtoInfo.key;
+    
+    if (productRefunds[produtoKey] !== undefined) {
+      productRefunds[produtoKey]++;
+    }
+  });
+  
+  // Calcular taxas de conversão de bumps
+  const bumpConversionRates = {};
+  
+  Object.keys(bumpRelations).forEach(mainProductKey => {
+    const mainProductSales = productSales[mainProductKey]?.total || 0;
+    
+    if (mainProductSales === 0) return;
+    
+    bumpConversionRates[mainProductKey] = {
+      displayName: productSales[mainProductKey].displayName,
+      bumps: {}
+    };
+    
+    Object.keys(bumpRelations[mainProductKey]).forEach(bumpKey => {
+      const bumpData = bumpRelations[mainProductKey][bumpKey];
+      const taxa = ((bumpData.count / mainProductSales) * 100).toFixed(2);
+      
+      bumpConversionRates[mainProductKey].bumps[bumpKey] = {
+        displayName: bumpData.displayName,
+        quantidade: bumpData.count,
+        taxa: taxa + '%',
+        basePrincipal: mainProductSales
+      };
+    });
+  });
+  
+  // Calcular percentuais LDR
+  const totalLDR = ldrCategories.ldr77 + ldrCategories.ldr147 + ldrCategories.ldr244 + ldrCategories.outros;
+  const ldrPercentages = {};
+  
+  if (totalLDR > 0) {
+    ldrPercentages.ldr77 = ((ldrCategories.ldr77 / totalLDR) * 100).toFixed(1) + '%';
+    ldrPercentages.ldr147 = ((ldrCategories.ldr147 / totalLDR) * 100).toFixed(1) + '%';
+    ldrPercentages.ldr244 = ((ldrCategories.ldr244 / totalLDR) * 100).toFixed(1) + '%';
+    ldrPercentages.outros = ((ldrCategories.outros / totalLDR) * 100).toFixed(1) + '%';
+  }
+  
+  // Detectar período
+  const dates = paidSales
+    .map(s => s['Data de pagamento'] || s['Data de criação'])
+    .filter(d => d)
+    .map(d => {
+      const parts = d.split(' ')[0].split('/');
+      return new Date(parts[2], parts[1] - 1, parts[0]);
+    })
+    .sort((a, b) => a - b);
+  
+  const period = dates.length > 0 ? {
+    start: dates[0].toLocaleDateString('pt-BR'),
+    end: dates[dates.length - 1].toLocaleDateString('pt-BR')
+  } : null;
+  
+  // Montar resposta
+  return {
+    period,
+    sales: productSales,
+    refunds: productRefunds,
+    ldrCategories: {
+      quantities: ldrCategories,
+      percentages: ldrPercentages
+    },
+    bumps: bumpConversionRates,
+    unmappedProducts: Array.from(unmappedProducts),
+    totalSales: paidSales.length,
+    totalRefunds: refunds.length
+  };
+}
+
+// ============================================
+// EXPORTAR FUNÇÕES
+// ============================================
+
+module.exports = {
+  processHubla,
+  identificarProduto,
+  categorizarLDR,
+  normalizeOrigin,
+  PRODUCT_CONFIG
+};
 // Processar Hotmart - COM DETECÇÃO DE NOVOS PRODUTOS
 // Processar Hotmart - COM SISTEMA FLEXÍVEL DE BUMPS
 function processHotmart(csvText) {
