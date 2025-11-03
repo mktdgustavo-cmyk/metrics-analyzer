@@ -91,7 +91,6 @@ function App() {
                 <span>{origin}:</span>
                 <span className="font-medium">{count}</span>
               </div>
-            ))}
 <div className={`mt-2 font-medium ${results.sales.ldr.refunds > 0 ? 'text-red-600' : 'text-green-600'}`}>
   Reembolsos: {results.sales.ldr.refunds}
 </div>
@@ -108,27 +107,10 @@ function App() {
               </div>
             ))}
           </div>
-<div className={`mt-2 font-medium ${results.sales.rnp.refunds > 0 ? 'text-red-600' : 'text-green-600'}`}>
-  Reembolsos: {results.sales.rnp.refunds}
-</div>
-```
-
----
-
-## ✅ **RESULTADO:**
-
-Agora vai **sempre aparecer**:
-- 🔴 **Vermelho** se tiver reembolsos
-- 🟢 **Verde** se for 0 (sem reembolsos)
-
----
-
-**Exemplo:**
-```
-Conversões - LDR: 57
-  Trafego: 32
-  WhatsApp: 15
-  Reembolsos: 5  ← Sempre visível
+{results.sales.rnp.refunds > 0 && (
+  <div className="mt-2 text-red-600">
+    Reembolsos: {results.sales.rnp.refunds}
+  </div>
           )}
         </div>
       </div>
