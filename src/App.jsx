@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './index.css';
 
 function App() {
   const [selectedProject, setSelectedProject] = useState('perettas');
@@ -8,11 +9,8 @@ function App() {
   const [error, setError] = useState(null);
 
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    setFile(selectedFile);
+    setFile(e.target.files[0]);
     setError(null);
-    setResults(null);
-    console.log('Arquivo selecionado:', selectedFile?.name);
   };
 
   const handleProcess = async () => {
@@ -23,301 +21,326 @@ function App() {
 
     setLoading(true);
     setError(null);
-    setResults(null);
 
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-      const endpoint = selectedProject === 'perettas' 
-        ? '/api/process-hubla' 
-        : '/api/process-hotmart';
-
-      // Detectar se está em produção ou desenvolvimento
-      const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const baseURL = isDevelopment ? 'http://localhost:80' : '';
-      
-      console.log('Enviando para:', `${baseURL}${endpoint}`);
-
-      const response = await fetch(`${baseURL}${endpoint}`, {
+      const endpoint = selectedProject === 'perettas' ? '/api/process/hubla' : '/api/process/hotmart';
+      const response = await fetch(endpoint, {
         method: 'POST',
         body: formData
       });
 
-      console.log('Response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erro ${response.status}: ${errorText}`);
-      }
+      if (!response.ok) throw new Error('Erro ao processar arquivo');
 
       const data = await response.json();
-      console.log('Dados recebidos:', data);
-      
       setResults(data);
     } catch (err) {
-      console.error('Erro completo:', err);
-      setError(`Erro ao processar: ${err.message}`);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold text-gray-800 mb-8 text-center">
-          📊 Dashboard de Vendas
-        </h1>
+  const renderPerettasResults = () => {
+  if (!results) return null;
 
-        {/* Seletor de Projeto */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Selecione o Projeto
-          </label>
-          <select
-            value={selectedProject}
-            onChange={(e) => {
-              setSelectedProject(e.target.value);
-              setResults(null);
-              setError(null);
-            }}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="perettas">Perettas (Hubla)</option>
-            <option value="gravacao">Gravação (Hotmart)</option>
-          </select>
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-xl font-bold mb-4 text-gray-800">📊 Métricas Principais</h3>
+        
+        <div className="mb-6">
+          <h4 className="font-semibold text-lg mb-2 text-blue-600">Conversões - LDR: {results.sales.ldr.total}</h4>
+          
+          {results.sales.ldr.categorias && (
+            <div className="mb-3 p-3 bg-blue-50 rounded-lg">
+              <h5 className="font-semibold text-sm text-blue-700 mb-2">📊 Distribuição por Oferta</h5>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white p-2 rounded text-center">
+                  <div className="text-xs text-gray-500">LDR 77</div>
+                  <div className="text-lg font-bold text-blue-600">
+                    {results.sales.ldr.categorias.ldr77.quantidade}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {results.sales.ldr.categorias.ldr77.percentual}
+                  </div>
+                </div>
+                <div className="bg-white p-2 rounded text-center">
+                  <div className="text-xs text-gray-500">LDR 147</div>
+                  <div className="text-lg font-bold text-purple-600">
+                    {results.sales.ldr.categorias.ldr147.quantidade}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {results.sales.ldr.categorias.ldr147.percentual}
+                  </div>
+                </div>
+              </div>
+              {results.sales.ldr.categorias.outros.quantidade > 0 && (
+                <div className="mt-2 text-xs text-gray-500 text-center">
+                  Outras ofertas: {results.sales.ldr.categorias.outros.quantidade}
+                </div>
+              )}
+            </div>
+          )}
+          
+          <div className="ml-4 space-y-1">
+            {Object.entries(results.sales.ldr.byOrigin).map(([origin, count]) => (
+              <div key={origin} className="flex justify-between text-gray-700">
+                <span>{origin}:</span>
+                <span className="font-medium">{count}</span>
+              </div>
+            ))}
+          </div>
+          {results.sales.ldr.refunds > 0 && (
+            <div className="mt-2 text-red-600">
+              Reembolsos: {results.sales.ldr.refunds}
+            </div>
+          )}
         </div>
 
-        {/* Upload */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Upload da Planilha
-          </label>
-          <input
-            type="file"
-            accept=".csv,.xlsx,.xls"
-            onChange={handleFileChange}
-            className="w-full p-3 border border-gray-300 rounded-lg mb-4"
-          />
-          {file && (
-            <p className="text-sm text-gray-600 mb-4">
-              Arquivo selecionado: <strong>{file.name}</strong>
-            </p>
+        <div className="mb-6">
+          <h4 className="font-semibold text-lg mb-2 text-green-600">Conversões - RNP: {results.sales.rnp.total}</h4>
+          <div className="ml-4 space-y-1">
+            {Object.entries(results.sales.rnp.byOrigin).map(([origin, count]) => (
+              <div key={origin} className="flex justify-between text-gray-700">
+                <span>{origin}:</span>
+                <span className="font-medium">{count}</span>
+              </div>
+            ))}
+          </div>
+          {results.sales.rnp.refunds > 0 && (
+            <div className="mt-2 text-red-600">
+              Reembolsos: {results.sales.rnp.refunds}
+            </div>
           )}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-xl font-bold mb-4 text-gray-800">💎 Bumps - Taxa de Conversão</h3>
+
+        {/* Bumps Geral */}
+        <div className="mb-4">
+          <h4 className="font-semibold text-sm text-gray-600 mb-2">📊 Geral (Todos os LDR)</h4>
+          <div className="space-y-2">
+            {Object.entries(results.bumps.conversionRates).map(([bump, rate]) => (
+              <div key={bump} className="flex justify-between items-center bg-gray-50 p-3 rounded">
+                <span className="text-gray-700">{bump}</span>
+                <span className="font-bold text-purple-600">{rate}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Bumps por Categoria */}
+        {results.bumps.byCategory && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {/* LDR 77 */}
+            <div className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
+              <h4 className="font-semibold text-sm text-blue-700 mb-3">
+                💎 Bumps LDR 77
+                <span className="text-xs text-gray-600 ml-2">
+                  (base: {results.bumps.byCategory.ldr77.totalVendas} vendas)
+                </span>
+              </h4>
+              {Object.keys(results.bumps.byCategory.ldr77.counts).length > 0 ? (
+                <div className="space-y-2">
+                  {Object.entries(results.bumps.byCategory.ldr77.counts).map(([bump, count]) => (
+                    <div key={bump} className="bg-white p-2 rounded">
+                      <div className="text-xs text-gray-600 truncate">{bump}</div>
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-sm font-medium text-blue-700">{count} vendas</span>
+                        <span className="text-sm font-bold text-blue-600">
+                          {results.bumps.byCategory.ldr77.conversionRates[bump]}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500 italic">Nenhum bump vendido</p>
+              )}
+            </div>
+            
+            {/* LDR 147 */}
+            <div className="border-2 border-purple-200 rounded-lg p-4 bg-purple-50">
+              <h4 className="font-semibold text-sm text-purple-700 mb-3">
+                💎 Bumps LDR 147
+                <span className="text-xs text-gray-600 ml-2">
+                  (base: {results.bumps.byCategory.ldr147.totalVendas} vendas)
+                </span>
+              </h4>
+              {Object.keys(results.bumps.byCategory.ldr147.counts).length > 0 ? (
+                <div className="space-y-2">
+                  {Object.entries(results.bumps.byCategory.ldr147.counts).map(([bump, count]) => (
+                    <div key={bump} className="bg-white p-2 rounded">
+                      <div className="text-xs text-gray-600 truncate">{bump}</div>
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-sm font-medium text-purple-700">{count} vendas</span>
+                        <span className="text-sm font-bold text-purple-600">
+                          {results.bumps.byCategory.ldr147.conversionRates[bump]}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500 italic">Nenhum bump vendido</p>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Quantidade Total de Bumps */}
+        <div className="mt-4 pt-4 border-t">
+          <h4 className="font-semibold mb-2 text-sm text-gray-600">📦 Quantidade Total de Vendas:</h4>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(results.bumps.counts).map(([bump, count]) => (
+              <div key={bump} className="flex justify-between text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                <span className="truncate">{bump}:</span>
+                <span className="font-medium ml-2">{count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+        
+    const renderGravaResults = () => {
+    if (!results) return null;
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-xl font-bold mb-4 text-gray-800">📊 Vendas Totais</h3>
+          <div className="grid grid-cols-2 gap-4">
+            {Object.entries(results.sales).map(([product, count]) => (
+              <div key={product} className="bg-blue-50 p-4 rounded-lg">
+                <div className="text-sm text-gray-600">{product}</div>
+                <div className="text-2xl font-bold text-blue-600">{count}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-xl font-bold mb-4 text-gray-800">💎 Taxa de Bump</h3>
+          <div className="space-y-2">
+            {Object.entries(results.bumpRates).map(([bump, rate]) => (
+              <div key={bump} className="flex justify-between items-center bg-purple-50 p-3 rounded">
+                <span className="text-gray-700">{bump}</span>
+                <span className="font-bold text-purple-600">{rate}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-xl font-bold mb-4 text-gray-800">🎯 Vendas por Origem</h3>
+          {Object.entries(results.salesByOrigin).map(([product, origins]) => (
+            <div key={product} className="mb-4 pb-4 border-b last:border-b-0">
+              <h4 className="font-semibold text-green-600 mb-2">{product}</h4>
+              <div className="ml-4 space-y-1">
+                {Object.entries(origins).map(([origin, count]) => (
+                  <div key={origin} className="flex justify-between text-gray-700">
+                    <span>{origin}:</span>
+                    <span className="font-medium">{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <header className="mb-8 text-center">
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">📈 Metrics Analyzer</h1>
+          <p className="text-gray-600">Análise automatizada de métricas semanais</p>
+        </header>
+
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Selecione o Projeto
+            </label>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => {
+                  setSelectedProject('perettas');
+                  setResults(null);
+                  setFile(null);
+                }}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  selectedProject === 'perettas'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="font-bold">Perettas</div>
+                <div className="text-sm text-gray-500">Hubla</div>
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedProject('grava-simples');
+                  setResults(null);
+                  setFile(null);
+                }}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  selectedProject === 'grava-simples'
+                    ? 'border-purple-500 bg-purple-50 text-purple-700'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="font-bold">Grava Simples</div>
+                <div className="text-sm text-gray-500">Hotmart</div>
+              </button>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Upload do Relatório (CSV ou XLSX)
+            </label>
+            <input
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              onChange={handleFileChange}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            {file && (
+              <p className="mt-2 text-sm text-green-600">
+                ✓ Arquivo selecionado: {file.name}
+              </p>
+            )}
+          </div>
+
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+              {error}
+            </div>
+          )}
+
           <button
             onClick={handleProcess}
             disabled={loading || !file}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
-            {loading ? '⏳ Processando...' : '🚀 Processar Planilha'}
+            {loading ? 'Processando...' : 'Analisar Métricas'}
           </button>
         </div>
 
-        {/* Erro */}
-        {error && (
-          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded">
-            <p className="font-bold">❌ Erro</p>
-            <p>{error}</p>
-            <p className="text-sm mt-2">
-              💡 Dica: Verifique se o servidor está rodando (porta 80 em produção ou porta 80 local)
-            </p>
-          </div>
-        )}
-
-        {/* Loading */}
-        {loading && (
-          <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-6 rounded">
-            <p className="font-bold">⏳ Processando planilha...</p>
-            <p className="text-sm">Aguarde enquanto analisamos os dados</p>
-          </div>
-        )}
-
-        {/* Resultados - PERETTAS */}
-        {results && selectedProject === 'perettas' && (
-          <div className="space-y-6">
-            {/* Período */}
-            {results.period && (
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="text-xl font-bold mb-2 text-gray-800">📅 Período</h3>
-                <p className="text-gray-600">
-                  {results.period.start} até {results.period.end}
-                </p>
-              </div>
-            )}
-
-            {/* Alertas de produtos não mapeados */}
-            {results.unmappedProducts && results.unmappedProducts.length > 0 && (
-              <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 px-4 py-3 rounded">
-                <h4 className="font-bold mb-2">⚠️ Produtos não identificados:</h4>
-                <ul className="list-disc list-inside text-sm">
-                  {results.unmappedProducts.map((p, i) => (
-                    <li key={i}>{p}</li>
-                  ))}
-                </ul>
-                <p className="text-xs mt-2">
-                  Esses produtos não foram reconhecidos. Adicione-os ao PRODUCT_CONFIG.
-                </p>
-              </div>
-            )}
-
-            {/* Resumo Geral */}
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
-              <h3 className="text-xl font-bold mb-4">📈 Resumo Geral</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-sm opacity-90">Total de Vendas</div>
-                  <div className="text-3xl font-bold">{results.totalSales}</div>
-                </div>
-                <div>
-                  <div className="text-sm opacity-90">Total de Reembolsos</div>
-                  <div className="text-3xl font-bold">{results.totalRefunds}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Vendas por Produto */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h3 className="text-xl font-bold mb-4 text-gray-800">💰 Vendas por Produto</h3>
-              <div className="space-y-4">
-                {Object.entries(results.sales).map(([key, data]) => (
-                  <div key={key} className="border-l-4 border-blue-500 pl-4 py-2 bg-gray-50 rounded">
-                    <div className="flex justify-between items-center mb-2">
-                      <h4 className="font-semibold text-lg">{data.displayName}</h4>
-                      <span className="text-2xl font-bold text-blue-600">
-                        {data.total}
-                      </span>
-                    </div>
-                    
-                    {/* Origem */}
-                    <div className="text-sm space-y-1 ml-4">
-                      {Object.entries(data.byOrigin).map(([origin, count]) => (
-                        <div key={origin} className="flex justify-between text-gray-600">
-                          <span>📍 {origin}:</span>
-                          <span className="font-medium">{count}</span>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {/* Reembolsos */}
-                    {results.refunds[key] > 0 && (
-                      <div className="mt-2 text-red-600 text-sm font-medium">
-                        ❌ Reembolsos: {results.refunds[key]}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Categorias LDR */}
-            {results.ldrCategories && results.ldrCategories.quantities && (
-              results.ldrCategories.quantities.ldr77 > 0 || results.ldrCategories.quantities.ldr147 > 0
-            ) && (
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="text-xl font-bold mb-4 text-gray-800">
-                  📊 Distribuição LDR (77 vs 147)
-                </h3>
-                
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg text-center border-2 border-blue-200">
-                    <div className="text-sm text-gray-600 mb-2">LDR 77</div>
-                    <div className="text-4xl font-bold text-blue-600 mb-2">
-                      {results.ldrCategories.quantities.ldr77}
-                    </div>
-                    <div className="text-xl font-semibold text-blue-700">
-                      {results.ldrCategories.percentages.ldr77}
-                    </div>
-                  </div>
-                  
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg text-center border-2 border-purple-200">
-                    <div className="text-sm text-gray-600 mb-2">LDR 147</div>
-                    <div className="text-4xl font-bold text-purple-600 mb-2">
-                      {results.ldrCategories.quantities.ldr147}
-                    </div>
-                    <div className="text-xl font-semibold text-purple-700">
-                      {results.ldrCategories.percentages.ldr147}
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Outras categorias */}
-                {(results.ldrCategories.quantities.ldr244 > 0 || 
-                  results.ldrCategories.quantities.outros > 0) && (
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    {results.ldrCategories.quantities.ldr244 > 0 && (
-                      <div className="bg-gray-50 p-3 rounded text-center border border-gray-200">
-                        <div className="text-gray-600">LDR 244</div>
-                        <div className="font-bold text-gray-800">
-                          {results.ldrCategories.quantities.ldr244} ({results.ldrCategories.percentages.ldr244})
-                        </div>
-                      </div>
-                    )}
-                    {results.ldrCategories.quantities.outros > 0 && (
-                      <div className="bg-gray-50 p-3 rounded text-center border border-gray-200">
-                        <div className="text-gray-600">Outros</div>
-                        <div className="font-bold text-gray-800">
-                          {results.ldrCategories.quantities.outros} ({results.ldrCategories.percentages.outros})
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Order Bumps */}
-            {results.bumps && Object.keys(results.bumps).length > 0 && (
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="text-xl font-bold mb-4 text-gray-800">
-                  🎁 Order Bumps - Taxa de Conversão
-                </h3>
-                
-                {Object.entries(results.bumps).map(([productKey, productData]) => (
-                  <div key={productKey} className="mb-6 last:mb-0">
-                    <h4 className="font-semibold text-lg mb-3 text-blue-600">
-                      {productData.displayName}
-                    </h4>
-                    
-                    <div className="space-y-2">
-                      {Object.entries(productData.bumps).map(([bumpKey, bumpData]) => (
-                        <div 
-                          key={bumpKey} 
-                          className="flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200"
-                        >
-                          <div>
-                            <div className="font-medium text-gray-800">{bumpData.displayName}</div>
-                            <div className="text-xs text-gray-500">
-                              Base: {bumpData.basePrincipal} vendas principais
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-3xl font-bold text-green-600">
-                              {bumpData.taxa}
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              {bumpData.quantidade} vendas
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Resultados - GRAVAÇÃO */}
-        {results && selectedProject === 'gravacao' && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">
-              🎬 Resultados da Gravação (Hotmart)
-            </h3>
-            <pre className="bg-gray-100 p-4 rounded text-xs overflow-auto">
-              {JSON.stringify(results, null, 2)}
-            </pre>
+        {results && (
+          <div className="animate-fadeIn">
+            {selectedProject === 'perettas' ? renderPerettasResults() : renderGravaResults()}
           </div>
         )}
       </div>
