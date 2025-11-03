@@ -85,35 +85,32 @@ function App() {
             </div>
           )}
           
-          <div className="ml-4 space-y-1">
-            {Object.entries(results.sales.ldr.byOrigin).map(([origin, count]) => (
-              <div key={origin} className="flex justify-between text-gray-700">
-                <span>{origin}:</span>
-                <span className="font-medium">{count}</span>
-              </div>
+<div className="ml-4 space-y-1">
+  {Object.entries(results.sales.ldr.byOrigin).map(([origin, count]) => (
+    <div key={origin} className="flex justify-between text-gray-700">
+      <span>{origin}:</span>
+      <span className="font-medium">{count}</span>
+    </div>
+  ))}
+</div>
 <div className={`mt-2 font-medium ${results.sales.ldr.refunds > 0 ? 'text-red-600' : 'text-green-600'}`}>
   Reembolsos: {results.sales.ldr.refunds}
 </div>
-          )}
-        </div>
 
-        <div className="mb-6">
-          <h4 className="font-semibold text-lg mb-2 text-green-600">Conversões - RNP: {results.sales.rnp.total}</h4>
-          <div className="ml-4 space-y-1">
-            {Object.entries(results.sales.rnp.byOrigin).map(([origin, count]) => (
-              <div key={origin} className="flex justify-between text-gray-700">
-                <span>{origin}:</span>
-                <span className="font-medium">{count}</span>
-              </div>
-            ))}
-          </div>
-{results.sales.rnp.refunds > 0 && (
-  <div className="mt-2 text-red-600">
+<div className="mb-6">
+  <h4 className="font-semibold text-lg mb-2 text-green-600">Conversões - RNP: {results.sales.rnp.total}</h4>
+  <div className="ml-4 space-y-1">
+    {Object.entries(results.sales.rnp.byOrigin).map(([origin, count]) => (
+      <div key={origin} className="flex justify-between text-gray-700">
+        <span>{origin}:</span>
+        <span className="font-medium">{count}</span>
+      </div>
+    ))}
+  </div>
+  <div className={`mt-2 font-medium ${results.sales.rnp.refunds > 0 ? 'text-red-600' : 'text-green-600'}`}>
     Reembolsos: {results.sales.rnp.refunds}
   </div>
-          )}
-        </div>
-      </div>
+</div>
 
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-xl font-bold mb-4 text-gray-800">💎 Bumps - Taxa de Conversão</h3>
